@@ -67,13 +67,16 @@ Variable definitions:
 Subjectid: Subject number
 CollectionDate: Date of sample collection formatted as mm/dd/yyyy
 Collection Sample: ordering of samples over the day ranging from 1-4. 1 is at waking, 2 ~30 min from waking, 3 at ~lunch and 4 at ~10 hours after waking.
+
 Booklet: Clock time: Time of day of sample collection noted by participant formatted as hh:mm in military time.
 MEMs: Clock time: Time of day of sample collection by electronic cap stamp formatted as hh:mm in military time.
 Sleep Diary reported wake time: Time of day of waking formatted as hh:mm in military time.
 Booklet: Sample interval: Number of hours and minutes from waking recorded by participant formatted as hh:mm where waking was recorded as midnight 00:00
 Booklet: Sample interval Decimal Time (mins): Number of minutes from waking for the sample as recorded by participant.
+
 MEMs: Sample interval: Number of hours and minutes from waking electronic cap stamp formatted as hh:mm where waking was recorded as midnight 00:00
 MEMs: Sample interval Decimal Time (mins): Number of minutes from waking electronic stamp.
+
 Cortisol (ug/dl): Cortisol levels in nanograms/deciliter units.
 DHEA (pg/dl): DHEA levels in picograms/deciliter units.
 Cortisol (nmol/L): Cortisol levels in a different unit.

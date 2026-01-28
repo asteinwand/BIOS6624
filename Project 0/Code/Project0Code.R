@@ -31,10 +31,10 @@ sum(cort$DHEA..nmol.L. >= 5.205, na.rm = T) # 6 >= 5.205
 # Remove the missing values and the values outside range given
 
 cort_clean <- cort[
-  !is.na(cort$Cortisol..nmol.L) &
+  !is.na(cort$Cortisol..nmol.L.) &
     !is.na(cort$DHEA..nmol.L.) &
-    cort$Cortisol..nmol.L <= 80 &
-    cort$DHEA..nmol.L. <= 5.205,
+    cort$Cortisol..nmol.L. < 80 &
+    cort$DHEA..nmol.L. < 5.205,
 ]
 
 nrow(cort) - nrow(cort_clean) # 6 total rows removed
@@ -57,6 +57,19 @@ boxplot(cort_clean$Booklet..Sample.interval.Decimal.Time..mins.,
         ylab = "Time in Minutes")
 
 
+# Histograms
 
+hist(cort_clean$Cortisol..nmol.L.,
+     breaks = 20,
+     main = "Cortisol")
 
+hist(cort_clean$DHEA..nmol.L.,
+     breaks = 20,
+     main = "DHEA")
+
+hist(cort_clean$Booklet..Sample.interval.Decimal.Time..mins.,
+     breaks = 20,
+     main = "Time")
+
+# All three are right skewed 
 
