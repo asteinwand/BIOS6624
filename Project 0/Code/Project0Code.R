@@ -159,6 +159,151 @@ ggplot(cort_clean, aes(x = MEMs.MinutesSinceWaking,
 
 ###################### Research Question 2 ###############################
 
+# creating a variable for the target minutes of 30 and 600 for adherence
+
+cort_clean$ScheduledTime <- NA
+cort_clean$ScheduledTime[cort_clean$Collection.Sample == 2] <- 30
+cort_clean$ScheduledTime[cort_clean$Collection.Sample == 4] <- 600
+
+
+# computing the deviation from the scheduled time
+
+cort_clean$Deviation <- abs(cort_clean$Booklet.MinutesSinceWaking -
+                              cort_clean$ScheduledTime)
+
+# Classifying what our adherence levels are
+
+cort_clean$Adherence <- cut(
+  cort_clean$Deviation,
+  breaks = c(-Inf, 7.5, 15, Inf),
+  labels = c("Good", "Adequate", "Poor")
+)
+
+# Getting percent of each samples in each category
+prop.table(table(cort_clean$Adherence)) * 100
+
+# PErcent of subjects within each category
+subject_adherence <- cort_clean %>%
+  group_by(SubjectID) %>%
+  summarize(
+    good = mean(Deviation <= 7.5, na.rm = TRUE),
+    adequate = mean(Deviation <= 15, na.rm = TRUE)
+  )
+
+
+# Sample-level adherence percentages
+sample_tab <- round(prop.table(table(cort_clean$Adherence)) * 100, 1)
+
+sample_df <- data.frame(
+  Adherence = names(sample_tab),
+  Percent = as.numeric(sample_tab)
+)
+
+# Subject-level adherence (using your existing subject_adherence object)
+subject_df <- data.frame(
+  Metric = c("Subjects 100% Good", "Subjects 100% Adequate"),
+  Percent = c(
+    mean(subject_adherence$good == 1) * 100,
+    mean(subject_adherence$adequate == 1) * 100
+  )
+)
+
+# Adherence by scheduled sample (+30 min vs +10 hr)
+sched_times <- sort(unique(na.omit(cort_clean$ScheduledTime)))
+
+good <- adequate <- poor <- numeric(length(sched_times))
+
+for (i in seq_along(sched_times)) {
+  idx <- cort_clean$ScheduledTime == sched_times[i]
+  devs <- cort_clean$Deviation[idx]
+  
+  good[i] <- mean(devs <= 7.5, na.rm = TRUE) * 100
+  adequate[i] <- mean(devs <= 15, na.rm = TRUE) * 100
+  poor[i] <- mean(devs > 15, na.rm = TRUE) * 100
+}
+
+by_sample_df <- data.frame(
+  ScheduledTime = ifelse(sched_times == 30, "+30 min", "+10 hr"),
+  Good = round(good, 1),
+  Adequate = round(adequate, 1),
+  Poor = round(poor, 1)
+)
+
+# Combine into one table
+final_table <- list(
+  "Overall Sample-Level Adherence (%)" = sample_df,
+  "Subject-Level Perfect Adherence (%)" = subject_df,
+  "Adherence by Scheduled Sample (%)" = by_sample_df
+)
+
+kable(final_table, caption = "Adherence Summary Table")
+
+
+
+###################### Research Question 3 ###############################
+
+# Time since waking
+time <- cort_clean$Booklet.MinutesSinceWaking
+
+# Piece 1: from 0 to 30 min
+cort_clean$Time0_30 <- pmin(time, 30)
+
+# Piece 2: time after 30 min
+cort_clean$Time30plus <- pmax(time - 30, 0)
+
+mod2 <- lmer(Cortisol..nmol.L. ~ Time0_30 + Time30plus + 
+                   (1 | SubjectID), 
+                 data = cort_clean)
+
+mod3 <- lmer(DHEA..nmol.L. ~ Time0_30 + Time30plus + 
+               (1 | SubjectID),
+             data = cort_clean)
+
+summary(mod2)
+summary(mod3)
+
+
+# More plots to visualize
+
+model_data <- model.frame(mod2)
+
+model_data$pred_cort <- predict(mod2)
+
+cort_clean$row_id <- seq_len(nrow(cort_clean))
+model_data$row_id <- cort_clean$row_id[as.numeric(rownames(model_data))]
+
+cort_clean <- merge(cort_clean, model_data[, c("row_id", "pred_cort")],
+                    by = "row_id", all.x = TRUE)
+
+cort_clean <- cort_clean[order(cort_clean$Booklet.MinutesSinceWaking), ]
+
+ggplot(cort_clean, aes(x = Booklet.MinutesSinceWaking,
+                       y = Cortisol..nmol.L.)) +
+  geom_point(aes(color = SubjectID), alpha = 0.5) +
+  geom_smooth(method = "loess", span = 0.5, se = FALSE, color = "green") +
+  labs(title = "Cortisol Over the Day (Piecewise LMM Fit)",
+       x = "Minutes Since Waking",
+       y = "Cortisol (nmol/L)")
+
+ggplot(cort_clean, aes(x = Booklet.MinutesSinceWaking,
+                       y = DHEA..nmol.L.)) +
+  geom_point(aes(color = SubjectID), alpha = 0.5) +
+  geom_smooth(method = "loess", span = 0.5, se = FALSE, color = "red") +
+  labs(title = "DHEA Over the Day (Piecewise LMM Fit)",
+       x = "Minutes Since Waking",
+       y = "DHEA (nmol/L)")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
