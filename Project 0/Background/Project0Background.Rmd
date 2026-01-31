@@ -24,7 +24,7 @@ waking, 30 min later, before lunch and 600 min after waking.  The time of waking
 subjects’ schedules.
 
 
-Our questions are: 
+# Our questions are: 
 1) what is the agreement between the subject’s recordings of sampling times compared to the times recorded by an electronic monitoring cap?, 
 
 2) are subjects adhering accurately to the +30min and +10 hour sampling times required by a study protocol?, 
@@ -94,12 +94,24 @@ Which time measurement should be used for this analysis (Cap or Booklet)?
 The investigator said she thought the two time measures should agree and therefore either would be fine. She asked us to choose whichever we thought would be best for statistical reasons.
 
 
+
 Analysis Plans:
 
-	1) Mixed effects model - explain bias and correlation/association
-		a. Cap time missing can only calculate for ones you have the pair - different rates of missingness for each group 
-	2) Booklet time - Good, adequate, bad adherence
+
+# Question 1
+Linear Mixed Model - explain bias and correlation/association
+- Cap time missing can only calculate for ones you have the pair - different rates of missingness for each group 
+- Can ignore days because the investigator doesn't really care about it, could add it to future worksum
+- compare booket clock time (y output) and mems clock time (x) & random int for subject
+**need to calculate minutes from waking using booket clock time** because given values were not calculated correctly apparently.
+		
+# Question 2
+Booklet time sample interval - Good, adequate, bad adherence
 What percent of people make it within the 7.5min window and what percent make it within the 15min window
+
+
+# Question 3
+Piecewise with knot at 30min LMMs because repeated measures to graph cortisol over the course of the day
 
 
 Variable definitions:

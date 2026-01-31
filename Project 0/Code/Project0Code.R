@@ -28,8 +28,8 @@ colSums(is.na(cort)) # Cortisol..nmol.L. 5 missing
 sum(cort$Cortisol..nmol.L. >= 80, na.rm = T) # only 1 >= 80 
 sum(cort$DHEA..nmol.L. >= 5.205, na.rm = T) # 6 >= 5.205
 
-# Remove the missing values and the values outside range given
 
+# Remove the missing values and the values outside range given
 
 cort_clean <- cort[
   !is.na(cort$Cortisol..nmol.L.) &
@@ -64,6 +64,7 @@ hist(cort_clean$DHEA..nmol.L.,
      breaks = 20,
      main = "DHEA")
 
+###################### Research Question 1 ###############################
 
 
 # Sleep wake time only recorded once per every 4 rows need to fill in missing ones
@@ -140,5 +141,25 @@ cort_clean$MEMs.MinutesSinceWaking <-
 
 mod1 <- lmer(Booklet.MinutesSinceWaking ~ MEMs.MinutesSinceWaking +
                (1 | SubjectID), data = cort_clean)
+summary(mod1)
+
+
+
+ggplot(cort_clean, aes(x = MEMs.MinutesSinceWaking,
+                       y = Booklet.MinutesSinceWaking,
+                       color = SubjectID)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "green") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(x = "MEMs Minutes Since Waking",
+       y = "Booklet Minutes Since Waking",
+       title = "Agreement Between Booklet and MEMs Sampling Times")
+
+
+
+###################### Research Question 2 ###############################
+
+
+
 
 
