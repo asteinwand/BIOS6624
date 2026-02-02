@@ -7,8 +7,39 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(knitr)
+library(emmeans)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(lme4)
+library(lmerTest)
+library(nlme)
+library(car)
 ```
 
+
+# \textit{Project 0 Report} 
+
+Maybe change later to something appropriate for this project?
+
+Aimee M Steinwand, BS, Colorado School of Public Health, University of Colorado Anschutz Medical Campus, Aurora, CO
+
+## Introduction
+
+
+This project is using data from a study that evaluated the feasibility and accuracy of a novel saliva collection device, the Saliva Procurement and Integrated Testing (SPIT) booklet, used for measuring patterns of cortisol and DHEA. Thirty-one healthy adults collected saliva samples four times per day, at waking, 30 minutes after waking, before lunch, and 600 minutes after waking, for three consecutive days. For each sample taken, two separate time measurements were available, when participants followed protocol correctly. The participant recorded a booklet time manually, and there was an electronic recorded cap time. Hormone concentrations (nmol/L) were assayed with some values missing due to laboratory issues or insufficient sample volumes. Additional missingness occurred if time measurements were not recorded due to device malfunction or participant error. 
+
+The aims of this project focus on three questions: the agreement between booklet recorded time and cap recorded times, the extent to which participants adhered to the protocol sampling windows at 30 minutes after waking and 600 minutes after waking, and the change in cortisol and DHEA levels throughout the day. 
+
+
+
+
+## Methods
+
+The investigator requested that the analysis quantify missing data rates and exclude biologically implausible hormone values (cortisol >80 nmol/L; DHEA at the assay’s upper detection limit of 5.205 nmol/L).
 
 
 
@@ -17,6 +48,7 @@ Booklet\;Minutes\;Since\;Waking = \beta_0+\beta_1*(MEMs\;Minutes\;Since\;Waking)
 $$
 
 
+## Results
 
 Fixed effects:
                           Estimate Std. Error         df t value Pr(>|t|)    
@@ -38,4 +70,12 @@ Booklet-reported sampling times showed extremely strong agreement with cap-recor
 
 # QUestion 3 gg plots of cortisol and DHEA
 
+
+
+## Conclusion/Discussion
+
+
+
+
+## Reproducible Research Information
 
