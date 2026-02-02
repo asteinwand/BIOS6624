@@ -151,9 +151,9 @@ ggplot(cort_clean, aes(x = MEMs.MinutesSinceWaking,
   geom_point(alpha = 0.7) +
   geom_smooth(method = "lm", se = FALSE, color = "green") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
-  labs(x = "MEMs Minutes Since Waking",
+  labs(x = "Cap Minutes Since Waking",
        y = "Booklet Minutes Since Waking",
-       title = "Agreement Between Booklet and MEMs Sampling Times")
+       title = "Agreement Between Booklet and Cap Times")
 
 
 
@@ -187,7 +187,7 @@ subject_adherence <- cort_clean %>%
   group_by(SubjectID) %>%
   summarize(
     good = mean(Deviation <= 7.5, na.rm = TRUE),
-    adequate = mean(Deviation <= 15, na.rm = TRUE)
+    adequate = mean(Deviation <= 15, na.rm = TRUE) ####Change to between 7.5-15 so no double count##
   )
 
 
@@ -199,7 +199,7 @@ sample_df <- data.frame(
   Percent = as.numeric(sample_tab)
 )
 
-# Subject-level adherence (using your existing subject_adherence object)
+# Subject-level adherence (using existing subject_adherence object)
 subject_df <- data.frame(
   Metric = c("Subjects 100% Good", "Subjects 100% Adequate"),
   Percent = c(
