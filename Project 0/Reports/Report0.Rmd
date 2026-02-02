@@ -32,8 +32,19 @@ Aimee M Steinwand, BS, Colorado School of Public Health, University of Colorado 
 
 This project is using data from a study that evaluated the feasibility and accuracy of a novel saliva collection device, the Saliva Procurement and Integrated Testing (SPIT) booklet, used for measuring patterns of cortisol and DHEA. Thirty-one healthy adults collected saliva samples four times per day, at waking, 30 minutes after waking, before lunch, and 600 minutes after waking, for three consecutive days. For each sample taken, two separate time measurements were available, when participants followed protocol correctly. The participant recorded a booklet time manually, and there was an electronic recorded cap time. Hormone concentrations (nmol/L) were assayed with some values missing due to laboratory issues or insufficient sample volumes. Additional missingness occurred if time measurements were not recorded due to device malfunction or participant error. 
 
-The aims of this project focus on three questions: the agreement between booklet recorded time and cap recorded times, the extent to which participants adhered to the protocol sampling windows at 30 minutes after waking and 600 minutes after waking, and the change in cortisol and DHEA levels throughout the day. 
+The aims of this project focus on three questions: the agreement between booklet recorded time and cap recorded times, the extent to which participants adhered to the protocol sampling windows at 30 minutes after waking and 600 minutes after waking, and the change in cortisol and DHEA levels throughout the day. These three aims were used to create the following hypotheses: 
 
+Aim 1:
+$H_0:$ There is no linear association between booklet recorded and cap recorded time.
+$H_1:$ There is a linear association between booklet recorded and cap recorded times.
+
+Aim 2:
+$H_0:$ The percent of samples collected within 7.5 minutes and within 15 minutes of the scheduled time, is equal to the percent of samples expected outside of the adherence windows.
+$H_1:$ The percent of samples that fall within the adherence windows of 7.5 minutes and within 15 minutes, is greater that the percent of samples expected outside the windows indicating good adherence from participants.
+
+Aim 3:
+$H_0:$ Cortisol and DHEA levels do not change from waking to 30 minutes after waking, and their rates of change throughout the rest of the day are zero.
+$H_1:$ Cortisol and DHEA levels increase from waking to 30 minutes after waking, followed by a non-zero decline throughout the rest of the day.
 
 
 
