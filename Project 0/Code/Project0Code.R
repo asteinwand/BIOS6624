@@ -187,7 +187,7 @@ subject_adherence <- cort_clean %>%
   group_by(SubjectID) %>%
   summarize(
     good = mean(Deviation <= 7.5, na.rm = TRUE),
-    adequate = mean(Deviation <= 15, na.rm = TRUE) ####Change to between 7.5-15 so no double count##
+    adequate = mean(Deviation >7.5 & Deviation <= 15, na.rm = TRUE) 
   )
 
 
@@ -218,7 +218,7 @@ for (i in seq_along(sched_times)) {
   devs <- cort_clean$Deviation[idx]
   
   good[i] <- mean(devs <= 7.5, na.rm = TRUE) * 100
-  adequate[i] <- mean(devs <= 15, na.rm = TRUE) * 100
+  adequate[i] <- mean(devs > 7.5 & devs <= 15, na.rm = TRUE) * 100
   poor[i] <- mean(devs > 15, na.rm = TRUE) * 100
 }
 
