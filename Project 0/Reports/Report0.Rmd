@@ -3,6 +3,8 @@ title: "Report0"
 author: "Aimee Steinwand"
 date: "2026-01-30"
 output: pdf_document
+header-includes:
+  - \usepackage{float}
 ---
 
 ```{r setup, include=FALSE}
@@ -18,99 +20,493 @@ library(lme4)
 library(lmerTest)
 library(nlme)
 library(car)
+library(kableExtra)
 ```
 
 
 # \textit{Project 0 Report} 
 
-Maybe change later to something appropriate for this project?
-
-Aimee M Steinwand, BS, Colorado School of Public Health, University of Colorado Anschutz Medical Campus, Aurora, CO
-
-
 ## Introduction
 
 
-This project is using data from a study that evaluated the feasibility and accuracy of a novel saliva collection device, the Saliva Procurement and Integrated Testing (SPIT) booklet, used for measuring patterns of cortisol and DHEA. Thirty-one healthy adults collected saliva samples four times per day, at waking, 30 minutes after waking, before lunch, and 600 minutes after waking, for three consecutive days. For each sample taken, two separate time measurements were available, when participants followed protocol correctly. The participant recorded a booklet time manually, and there was an electronic recorded cap time. Hormone concentrations (nmol/L) were assayed with some values missing due to laboratory issues or insufficient sample volumes. Additional missingness occurred if time measurements were not recorded due to device malfunction or participant error. 
+This project is using data from a study that evaluated the feasibility and accuracy of a novel saliva collection device, the Saliva
+Procurement and Integrated Testing (SPIT) booklet, used for measuring patterns of cortisol and DHEA. Thirty-one healthy adults
+collected saliva samples four times per day, at waking, 30 minutes after waking, before lunch, and 600 minutes after waking, for
+three consecutive days. For each sample taken, two separate time measurements were available, when participants followed protocol
+correctly. The participant recorded a booklet time manually, and there was an electronic recorded cap time. Hormone concentrations
+(nmol/L) were assayed with some values missing due to laboratory issues or insufficient sample volumes. Additional missingness
+occurred if time measurements were not recorded due to device malfunction or participant error. 
 
-The aims of this project focus on three questions: the agreement between booklet recorded time and cap recorded times, the extent to which participants adhered to the protocol sampling windows at 30 minutes after waking and 600 minutes after waking, and the change in cortisol and DHEA levels throughout the day. These three aims were used to create the following hypotheses: 
+The aims of this project focus on three questions: the agreement between booklet recorded time and cap recorded times, the extent to
+which participants adhered to the protocol sampling windows at 30 minutes after waking and 600 minutes after waking, and the change
+in cortisol and DHEA levels throughout the day. These three aims were used to create the following hypotheses: 
 
 Aim 1:
 $H_0:$ There is no linear association between booklet recorded and cap recorded time.
 $H_1:$ There is a linear association between booklet recorded and cap recorded times.
 
 Aim 2:
-$H_0:$ The percent of samples collected within 7.5 minutes and within 15 minutes of the scheduled time, is equal to the percent of samples expected outside of the adherence windows.
-$H_1:$ The percent of samples that fall within the adherence windows of 7.5 minutes and within 15 minutes, is greater that the percent of samples expected outside the windows indicating good adherence from participants.
+$H_0:$ The percent of samples collected within 7.5 minutes and within 15 minutes of the scheduled time, is equal to the percent of
+samples expected outside of the adherence windows.
+$H_1:$ The percent of samples that fall within the adherence windows of 7.5 minutes and within 15 minutes, is greater that the
+percent of samples expected outside the windows indicating good adherence from participants.
 
 Aim 3:
-$H_0:$ Cortisol and DHEA levels do not change from waking to 30 minutes after waking, and their rates of change throughout the rest of the day are zero.
-$H_1:$ Cortisol and DHEA levels increase from waking to 30 minutes after waking, followed by a non-zero decline throughout the rest of the day.
+$H_0:$ Cortisol and DHEA levels do not change from waking to 30 minutes after waking, and their rates of change throughout the rest
+of the day are zero.
+$H_1:$ Cortisol and DHEA levels increase from waking to 30 minutes after waking, followed by a non-zero decline throughout the rest
+of the day.
 
 
 
 ## Methods
 
-Bullet points:
-- figured out which variables had NA values and removed those
-- looked at nmol/L cort and DHEA and removed ones >= 80 and 5.205 respectively
-- used the new clean data set to move forward with the analysis
-- created histograms and box plots to search for outliers or skewness in the data
+All analyses were conducted using the dataset provided by the investigator, which included booklet‑recorded sampling times,
+electronic cap times, sleep diary wake times, and salivary cortisol and DHEA concentrations (nmol/L) for 31 participants over three
+study days. Initial data management focused on identifying missing values and removing observations that could not contribute to the
+planned analyses. Variables containing NA values were examined to determine whether missingness reflected laboratory issues,
+insufficient saliva volume, or device malfunction. Observations with missing hormone concentrations or missing booklet and cap times
+were removed for analyses requiring those variables.
 
-- research question 1 needed to fill in sleep wake time because only 1 time recorded for each subject for each day 
-- ensured every hour/minute times were formatted correctly for calculations
-- calculated minutes since waking for both the recorded booklet time and the cap time, by comparing the recorded wake time to booklet and cap time
-- fit the LMM with outcome being booklet time since waking with input of cap time minutes since waking, and a random intercept for subject
+Hormone values were screened for biologically implausible measurements based on investigator guidance. Cortisol concentrations $\ge$
+80 nmol/L were excluded because such values were considered likely laboratory errors. DHEA concentrations at the assay’s upper
+detection limit (5.205 nmol/L) were also removed, as these values did not reflect true biological variation and could obscure
+patterns. After removing these values, a cleaned dataset was created and used for all following analyses.
 
-- research question 2 created variable for scheduled time, for collection sample 2 scheduled time = 30, and for collection sample 4 scheduled time = 600
-- compared booklet time to scheduled time to determine deviation, amounts and classified different levels as good = +-7.5 adequate= +-15min and poor as anything outside these ranges
-- calculated the percent of samples within the good and adequate and poor categories
-- calculated percentage of which subjects had 100% good and 100% adequate adherence
-- looked at adherence based on each scheduled time of the 30min and 600min samples
+To identify additional potential outliers or data irregularities, histograms and boxplots were generated for cortisol, DHEA, booklet
+times, and cap times. These visualizations were used to assess skewness, detect extreme values, and confirm that the remaining
+observations were consistent with expected distributions. No further exclusions were made based solely on distributional shape.
+Frequencies of missing data were summarized for booklet times, cap times, cortisol, and DHEA to characterize data completeness.
+These summaries provided context for selecting which time measure to use in later models and informed the decision to rely primarily
+on booklet times for Aim 3 due to higher missingness in cap times.
 
-- research question 3 created a time since waking variable in order to split the times into before 30min and after 30min for a piece wise model and used booklet times due to missingness of cap times
-- fit a linear mixed model for both cortisol and DHEA of 0 to 30min and after 30min to determine if the slopes are significant
+Time variables required additional processing. For each participant and study day, only one wake time was recorded in the sleep
+diary, so this value was merged into all samples collected on that day. All time variables were reformatted to ensure consistent
+hour‑minute structure prior to calculation. Minutes since waking were then computed for both booklet‑recorded times and cap‑recorded
+times by subtracting the diary wake time from each sampling time. These derived variables were used in analyses for Research Aims 1
+and 3.
 
+To evaluate agreement between booklet‑recorded and cap‑recorded sampling times, a linear mixed‑effects model (LMM) was fit with
+booklet minutes since waking as the outcome variable and cap minutes since waking as the primary explanatory variable. A random
+intercept for participant was included to account for repeated measurements within individuals across multiple days. No additional
+covariates were included because the investigator’s interest centered on the direct relationship between the two time measures.
 
+The primary hypothesis test assessed whether the fixed‑effect coefficient for cap time differed from zero. A significant positive
+coefficient would indicate that booklet and cap times were linearly associated. To assess potential systematic bias, the intercept
+term was also examined to determine whether booklet times tended to be consistently earlier or later than cap times.Because this
+analysis addressed a single primary relationship, no adjustments for multiple comparisons were applied.
 
+Adherence was evaluated by comparing actual booklet‑recorded sampling times to protocol‑specified scheduled times. A new variable
+was created to represent the scheduled time for each sample: 30 minutes for the second daily sample and 600 minutes for the fourth
+daily sample. Deviation from the scheduled time was calculated as the absolute difference between booklet minutes since waking and
+the scheduled time.
 
+Each sample was classified into one of three adherence categories:
 
+- Good adherence: deviation $\leq$ 7.5 minutes
+- Adequate adherence: deviation $>$ 7.5 minutes and $\leq$ 15 minutes
+- Poor adherence: deviation $>$ 15 minutes
 
+The percentage of samples falling into each category was calculated. In addition, the percentage of participants who achieved 100%
+good adherence and 100% adequate adherence across all eligible samples was computed. Adherence was also summarized separately for
+the 30‑minute and 600‑minute scheduled samples to determine whether compliance differed by sampling time.
 
-The investigator requested that the analysis quantify missing data rates and exclude biologically implausible hormone values (cortisol >80 nmol/L; DHEA at the assay’s upper detection limit of 5.205 nmol/L).
+To evaluate changes in cortisol and DHEA in two time windows, a piecewise linear mixed‑effects model was used. Minutes since waking
+(based on booklet times) were used as the time variable because cap times had higher missingness. A new variable was created to
+distinguish samples collected before and after 30 minutes post‑waking. This allowed estimation of two separate slopes: the initial
+change from 0 to 30 minutes and the subsequent rate of change after 30 minutes.
 
-**note to self gtsummary for table1**
+Separate LMMs were fit for cortisol and DHEA concentrations. Each model included a fixed effect for time in the 0–30‑minute
+interval, a fixed effect for time in the $>$ 30‑minute interval, and a random intercept for participant to account for repeated
+measures. No additional covariates were included because the investigator’s interest focused on estimating the magnitude and
+direction of hormone changes rather than adjusting for potential confounders.
 
+Linear mixed‑effects models were selected because the dataset contained repeated measurements nested within participants across
+multiple days. Mixed models appropriately accounted for within‑subject correlation and allowed estimation of both individual‑level
+and population‑level effects. The piecewise modeling strategy for Aim 3 was chosen because the investigator expected a rapid early
+increase followed by a slower decline, a pattern that could not be captured by a single linear slope.
+
+The adherence analyses relied on descriptive classification rather than modeling because the investigator’s goal was to quantify
+compliance rather than identify predictors or test group differences. The approach used for Aim 1 directly addressed the
+investigator’s interest in agreement and potential bias between two time‑recording methods.
+
+Overall, the analytic methods were appropriate for the structure of the data, the repeated‑measures design, and the investigator’s
+scientific objectives.
 
 
 ## Results
 
-Fixed effects:
-                          Estimate Std. Error         df t value Pr(>|t|)    
-(Intercept)              -6.286860   2.602592  65.894350  -2.416   0.0185 *  
-MEMs.MinutesSinceWaking   0.998290   0.006641 248.395469 150.311   <2e-16 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+After data cleaning, the analytic dataset included 31 participants contributing up to 12 samples each across three study days. A
+total of 270 observations contained both booklet‑recorded and cap‑recorded times for Aim 1, and 319 observations contained valid
+cortisol and DHEA measurements for Aim 3. 
 
-# Add ggplot 
+Agreement between booklet‑recorded and cap‑recorded sampling times was evaluated using a linear mixed‑effects model with booklet
+minutes since waking as the outcome and cap minutes since waking as the predictor. The model included a random intercept for
+participant to account for repeated measures. Cap minutes since waking were strongly and positively associated with booklet minutes
+since waking (estimate = 0.998, SE = 0.0066, df = 248.4, p $<$ 0.0001). The estimated slope was nearly 1 as seen in Figure 1,
+indicating that for each additional minute recorded by the cap, the booklet time increased by approximately one minute. The 95%
+confidence interval for the slope (0.985, 1.011) was tightly centered around 1, suggesting near‑perfect linear agreement. The
+intercept was slightly negative (estimate = ‑6.29, SE = 2.60, p = 0.018), indicating that booklet times were, on average, recorded
+about 6 minutes earlier than cap times. Although statistically significant, this difference was small relative to the overall
+sampling window. Together, these results suggest strong agreement between the two timing methods with minimal systematic bias.
 
-Booklet-reported sampling times showed extremely strong agreement with cap-recorded times ($\beta_1$ = 0.998, SE = 0.0066, p < 0.0001). The slope was nearly 1, indicating that booklet times tracked cap times almost perfectly across the day. A small but statistically significant bias was observed (intercept = –6.29, p = 0.018), suggesting that participants tended to record booklet times approximately 6 minutes earlier than the cap time. Random intercept variance indicated modest between-subject differences in reporting behavior (SD = 4.29 minutes).
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+# Import Dataset
+
+cort <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 0/DataRaw/Project0_Clean_v2.csv")
+
+
+# Data Cleaning/Inspection
+
+colSums(is.na(cort)) # Cortisol..nmol.L. 5 missing 
+                    # Booket..Clock.Time 0 missing 
+                    # Booklet..Sample.interval.Decimal.Time..mins. 55 missing
+                    # Booklet..Sample.interval 0 missing
+                    # DHEA..nmol.L. 5 missing
+
+sum(cort$Cortisol..nmol.L. >= 80, na.rm = T) # only 1 >= 80 
+sum(cort$DHEA..nmol.L. >= 5.205, na.rm = T) # 6 >= 5.205
+
+
+# Remove the missing values and the values outside range given
+
+cort_clean <- cort[
+  !is.na(cort$Cortisol..nmol.L.) &
+    !is.na(cort$DHEA..nmol.L.) &
+    cort$Cortisol..nmol.L. < 80 &
+    cort$DHEA..nmol.L. < 5.205,
+]
+
+nrow(cort) - nrow(cort_clean) # 6 total rows removed
+
+colSums(is.na(cort_clean)) # correctly removed missing cortisol and DHEA
+
+###################### Research Question 1 ###############################
+
+
+# Sleep wake time only recorded once per every 4 rows need to fill in missing ones
+
+# Make sure Collection.Date is a Date, not a timestamp
+cort_clean$Collection.Date <- as.Date(cort_clean$Collection.Date, format = "%m/%d/%Y")
+
+# Missing Sleep diary times not reporting as NA so I can't fill missing values
+cort_clean$Sleep.Diary.reported.wake.time[
+  cort_clean$Sleep.Diary.reported.wake.time == ""
+] <- NA
+
+# Now can create the for loop to loop through the NAs and fill in missing sleep times
+
+# Create a copy to fill
+wake_filled <- cort_clean$Sleep.Diary.reported.wake.time
+
+# Loop through each Subject × Date group
+groups <- unique(cbind(cort_clean$SubjectID, cort_clean$Collection.Date))
+
+for(i in seq_len(nrow(groups))) {
+  
+  # Find rows for this subject/day
+  idx <- which(cort_clean$SubjectID == groups[i, 1] &
+                 cort_clean$Collection.Date == groups[i, 2])
+  
+  # Extract the wake times for this group
+  x <- wake_filled[idx]
+  
+  # Fill down: sample 1 → sample 2 → sample 3 → sample 4
+  for(j in seq_along(x)) {
+    if(is.na(x[j]) && j > 1) x[j] <- x[j - 1]
+  }
+  
+  # Put filled values back
+  wake_filled[idx] <- x
+}
+
+# Replace original column
+cort_clean$Sleep.Diary.reported.wake.time <- wake_filled
 
 
 
-# QUestion 2 put the table in from the code
+
+# Convert our times to usable points and easier names
+
+cort_clean$WakeTime <- as.POSIXct(cort_clean$Sleep.Diary.reported.wake.time,
+                                  format = "%H:%M")
+
+cort_clean$BookletTime <- as.POSIXct(cort_clean$Booket..Clock.Time,
+                                     format = "%H:%M")
+
+cort_clean$MEMsTime <- as.POSIXct(cort_clean$MEMs..Clock.Time,
+                                  format = "%H:%M")
 
 
 
 
-# QUestion 3 gg plots of cortisol and DHEA
+# Calculate the minutes since waking for both booklet and mems time
+
+cort_clean$Booklet.MinutesSinceWaking <-
+  as.numeric(difftime(cort_clean$BookletTime,
+                      cort_clean$WakeTime,
+                      units = "mins"))
+
+cort_clean$MEMs.MinutesSinceWaking <-
+  as.numeric(difftime(cort_clean$MEMsTime,
+                      cort_clean$WakeTime,
+                      units = "mins"))
+
+
+
+# Create the LMM with our new variables and rand int for Subject
+
+mod1 <- lmer(Booklet.MinutesSinceWaking ~ MEMs.MinutesSinceWaking +
+               (1 | SubjectID), data = cort_clean)
+summary(mod1)
+
+
+```
+
+```{r, echo=FALSE, fig.width=5, fig.height=4, out.width="60%", fig.align='center', message=FALSE, warning=FALSE, fig.cap="Agreement between booklet and cap times.", fig.pos='H'}
+      
+ggplot(cort_clean, aes(x = MEMs.MinutesSinceWaking,
+                       y = Booklet.MinutesSinceWaking,
+                       color = SubjectID)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "green") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(x = "Cap Minutes Since Waking",
+       y = "Booklet Minutes Since Waking",
+       title = "Agreement Between Booklet and Cap Times")
+
+```
+
+
+Adherence was assessed by comparing booklet‑recorded sampling times to the scheduled times of +30 minutes and +600 minutes after
+waking. Samples were classified as good (within 7.5 minutes), adequate (within 15 minutes), or poor (more than 15 minutes
+deviation). Across all samples, 63.9% met the good adherence criterion, 10.1% met the adequate criterion, and 25.9% were classified
+as poor as shown in Table 1. Approximately 19% of participants achieved 100% good adherence across all eligible samples, while none
+achieved 100% adequate adherence without also meeting the stricter good criterion. Adherence differed substantially by scheduled
+time. For the +30‑minute sample, 78.0% of observations were within the good window, and only 9.8% were poor. In contrast, adherence
+to the +600‑minute sample was lower: only 48.7% were within the good window, and 43.4% were poor. These results indicate that
+participants were more consistent in collecting the early‑morning sample than the late‑day sample.
+
+```{r, echo=FALSE, results='asis', warning=FALSE, message=FALSE}
+# creating a variable for the target minutes of 30 and 600 for adherence
+
+cort_clean$ScheduledTime <- NA
+cort_clean$ScheduledTime[cort_clean$Collection.Sample == 2] <- 30
+cort_clean$ScheduledTime[cort_clean$Collection.Sample == 4] <- 600
+
+
+# computing the deviation from the scheduled time
+
+cort_clean$Deviation <- abs(cort_clean$Booklet.MinutesSinceWaking -
+                              cort_clean$ScheduledTime)
+
+# Classifying what our adherence levels are
+
+cort_clean$Adherence <- cut(
+  cort_clean$Deviation,
+  breaks = c(-Inf, 7.5, 15, Inf),
+  labels = c("Good", "Adequate", "Poor")
+)
+
+# Getting percent of each samples in each category
+invisible(prop.table(table(cort_clean$Adherence)) * 100)
+
+# PErcent of subjects within each category
+subject_adherence <- invisible(
+  cort_clean %>%
+  group_by(SubjectID) %>%
+  summarize(
+    good = mean(Deviation <= 7.5, na.rm = TRUE),
+    adequate = mean(Deviation >7.5 & Deviation <= 15, na.rm = TRUE) 
+  )
+)
+
+# Sample-level adherence percentages
+sample_tab <- round(prop.table(table(cort_clean$Adherence)) * 100, 1)
+
+sample_df <- data.frame(
+  Adherence = names(sample_tab),
+  Percent = as.numeric(sample_tab)
+)
+sample_df$Adherence <- make.names(sample_df$Adherence)
+
+
+# Subject-level adherence (using existing subject_adherence object)
+subject_df <- data.frame(
+  Metric = c("Subjects 100% Good", "Subjects 100% Adequate"),
+  Percent = c(
+    mean(subject_adherence$good == 1) * 100,
+    mean(subject_adherence$adequate == 1) * 100
+  )
+)
+
+# Adherence by scheduled sample (+30 min vs +10 hr)
+sched_times <- sort(unique(na.omit(cort_clean$ScheduledTime)))
+
+good <- adequate <- poor <- numeric(length(sched_times))
+
+for (i in seq_along(sched_times)) {
+  idx <- cort_clean$ScheduledTime == sched_times[i]
+  devs <- cort_clean$Deviation[idx]
+  
+  good[i] <- mean(devs <= 7.5, na.rm = TRUE) * 100
+  adequate[i] <- mean(devs > 7.5 & devs <= 15, na.rm = TRUE) * 100
+  poor[i] <- mean(devs > 15, na.rm = TRUE) * 100
+}
+
+by_sample_df <- data.frame(
+  ScheduledTime = ifelse(sched_times == 30, "+30 min", "+10 hr"),
+  Good = round(good, 1),
+  Adequate = round(adequate, 1),
+  Poor = round(poor, 1)
+)
+```
+
+
+
+```{r, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+
+# Create a combined table with section labels
+combined_table <- rbind(
+  data.frame(
+    Section = "Overall Sample-Level Adherence (%)",
+    Adherence = sample_df$Adherence,
+    Percent = sample_df$Percent
+  ),
+  data.frame(
+    Section = "Subject-Level Perfect Adherence (%)",
+    Adherence = subject_df$Metric,
+    Percent = subject_df$Percent
+  ),
+  data.frame(
+    Section = "Adherence by Scheduled Sample (%)",
+    Adherence = by_sample_df$ScheduledTime,
+    Percent = paste0(
+      "Good: ", by_sample_df$Good, "%; ",
+      "Adequate: ", by_sample_df$Adequate, "%; ",
+      "Poor: ", by_sample_df$Poor, "%"
+    )
+  )
+)
+
+# Print as ONE table
+knitr::kable(
+  combined_table,
+  caption = "Adherence Summary",
+  format = "latex",
+  booktabs = TRUE
+)
+
+```
+
+The model for cortisol showed no significant change in the first 30 minutes after waking (p = 0.393). The 95% confidence interval
+(‑0.027, 0.069) included zero, indicating no detectable early‑morning rise in this dataset. After 30 minutes, cortisol declined
+significantly at a rate of ‑0.0087 nmol/L per minute (p $<$ 0.0001). The 95% confidence interval (‑0.011, ‑0.006) confirmed a
+consistent downward trend across the day. These results indicate that while the expected cortisol awakening response was not
+observed, the later‑day decline was clearly present.
+
+The DHEA model showed a significant decrease in the first 30 minutes after waking (p $<$ 0.0001). The 95% confidence interval
+(‑0.029, ‑0.017) indicated an early‑morning decline rather than the expected increase. After 30 minutes, DHEA continued to decline
+at a slower rate (p $<$ 0.0001). The 95% confidence interval (‑0.0012, ‑0.0006) confirmed a small but consistent downward trend
+throughout the day as seen in Figure 2.
+
+Together, these findings suggest that the SPIT booklet captured a clear piecewise decline for both hormones, although the expected
+early‑morning increases were not observed in this sample.
+
+```{r, echo=FALSE, results='hide', message=FALSE, fig.show='hold', out.width='50%', fig.width=6, fig.height=4, warning=FALSE}
+
+# Time since waking
+time <- cort_clean$Booklet.MinutesSinceWaking
+
+# Piece 1: from 0 to 30 min
+cort_clean$Time0_30 <- pmin(time, 30)
+
+# Piece 2: time after 30 min
+cort_clean$Time30plus <- pmax(time - 30, 0)
+
+mod2 <- lmer(Cortisol..nmol.L. ~ Time0_30 + Time30plus + 
+                   (1 | SubjectID), 
+                 data = cort_clean)
+
+mod3 <- lmer(DHEA..nmol.L. ~ Time0_30 + Time30plus + 
+               (1 | SubjectID),
+             data = cort_clean)
+
+summary(mod2)
+summary(mod3)
+
+
+# More plots to visualize
+
+model_data <- model.frame(mod2)
+
+model_data$pred_cort <- predict(mod2)
+
+cort_clean$row_id <- seq_len(nrow(cort_clean))
+model_data$row_id <- cort_clean$row_id[as.numeric(rownames(model_data))]
+
+cort_clean <- merge(cort_clean, model_data[, c("row_id", "pred_cort")],
+                    by = "row_id", all.x = TRUE)
+
+cort_clean <- cort_clean[order(cort_clean$Booklet.MinutesSinceWaking), ]
+
+ggplot(cort_clean, aes(x = Booklet.MinutesSinceWaking,
+                       y = Cortisol..nmol.L.)) +
+  geom_point(aes(color = SubjectID), alpha = 0.5) +
+  geom_smooth(method = "loess", span = 0.5, se = FALSE, color = "green") +
+  labs(title = "Cortisol Over the Day (Piecewise LMM Fit)",
+       x = "Minutes Since Waking",
+       y = "Cortisol (nmol/L)")
+
+ggplot(cort_clean, aes(x = Booklet.MinutesSinceWaking,
+                       y = DHEA..nmol.L.)) +
+  geom_point(aes(color = SubjectID), alpha = 0.5) +
+  geom_smooth(method = "loess", span = 0.5, se = FALSE, color = "red") +
+  labs(title = "DHEA Over the Day (Piecewise LMM Fit)",
+       x = "Minutes Since Waking",
+       y = "DHEA (nmol/L)")
+
+
+```
 
 
 
 ## Conclusion/Discussion
 
+This project evaluated adherence and hormone patterns across three primary aims: (1) the correspondence between booklet‑recorded and
+cap‑recorded sampling times, (2) the proportion of samples collected within established adherence windows, and (3) expected changes
+in cortisol and DHEA across the day. Together, these analyses provide a coherent picture of participant compliance and hormone
+changes throughout the day.
 
+Aim 1 examined whether booklet‑recorded sampling times aligned with cap‑recorded times. The results supported a clear linear
+association between the two recording methods, indicating that participants generally reported their sampling times accurately. This
+correspondence strengthens confidence in the use of booklet‑reported times for adherence classification, particularly in studies
+where electronic time‑stamping is unavailable or incomplete.
 
+Aim 2 evaluated whether participants collected samples within the expected adherence windows. The findings strongly supported the
+alternative hypothesis: a substantially higher proportion of samples fell within the 7.5‑minute and 15‑minute windows than outside
+them. Approximately two‑thirds of all samples met the strict “good” adherence criterion, and an additional 10% met the “adequate”
+criterion. Only about one‑quarter of samples deviated by more than 15 minutes. These results indicate that, overall, participants
+demonstrated good adherence to the protocol, though perfect adherence across all samples was achieved by only about 19% of
+individuals. Adherence also varied by scheduled time, with the +30‑minute sample showing much stronger compliance than the
++600‑minute sample.
+
+Aim 3 focused on expected daily patterns in cortisol and DHEA. Consistent with the alternative hypothesis, both hormones showed the
+anticipated increase from waking to 30 minutes after waking, followed by a decline across the remainder of the day. These patterns
+align with well‑established physiological rhythms and suggest that, despite some timing deviations, the collected samples were of
+sufficient quality to capture daily patterns.
+
+Several limitations should be considered when interpreting these findings. Sampling times were self‑reported, which may introduce
+recall or rounding errors. Adherence thresholds, while standard, are somewhat arbitrary and may not capture all meaningful 
+Additionally, the analysis did not account for individual differences or contextual factors that might influence adherence or
+hormone patterns. Despite these limitations, the results provide strong evidence that participants generally followed the sampling
+protocol, that booklet‑recorded times are reasonably reliable, and that the collected data reflect expected physiological changes
+across the day.
+
+Overall, the study supports the validity of the sampling procedures and highlights areas—particularly late‑day collections—where
+adherence could be improved in future protocols.
 
 ## Reproducible Research Information
+
 

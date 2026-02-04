@@ -153,7 +153,7 @@ ggplot(cort_clean, aes(x = MEMs.MinutesSinceWaking,
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
   labs(x = "Cap Minutes Since Waking",
        y = "Booklet Minutes Since Waking",
-       title = "Agreement Between Booklet and Cap Times")
+       title = "Figure 1: Agreement Between Booklet and Cap Times")
 
 
 
@@ -236,7 +236,7 @@ final_table <- list(
   "Adherence by Scheduled Sample (%)" = by_sample_df
 )
 
-kable(final_table, caption = "Adherence Summary Table")
+kable(final_table, caption = "Table 1: Adherence Summary")
 
 
 
