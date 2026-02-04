@@ -65,14 +65,11 @@ Bullet points:
 - research question 2 created variable for scheduled time, for collection sample 2 scheduled time = 30, and for collection sample 4 scheduled time = 600
 - compared booklet time to scheduled time to determine deviation, amounts and classified different levels as good = +-7.5 adequate= +-15min and poor as anything outside these ranges
 - calculated the percent of samples within the good and adequate and poor categories
-
-**Need to change adequate category to BETWEEN 7.5 and 15min so no double counts**
-
 - calculated percentage of which subjects had 100% good and 100% adequate adherence
 - looked at adherence based on each scheduled time of the 30min and 600min samples
 
 - research question 3 created a time since waking variable in order to split the times into before 30min and after 30min for a piece wise model and used booklet times due to missingness of cap times
-- 
+- fit a linear mixed model for both cortisol and DHEA of 0 to 30min and after 30min to determine if the slopes are significant
 
 
 
