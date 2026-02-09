@@ -1,0 +1,12 @@
+library(bayesplot)
+library(posterior)
+library(bayestestR)
+library(mcmcse)
+library(loo)
+library(MASS)
+library(knitr)
+library(emmeans)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+
