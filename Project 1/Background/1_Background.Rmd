@@ -42,6 +42,45 @@ We are not sure what happens to quality of life after initiating treatment - whi
 Some of our colleague’s statistical team has been doing their analysis Bayesian.  We are requesting that the analysis be done in both a Bayesian and non-Bayesian framework and compared.
 
 
+# Questions for PI
+
+Only interested in hard drugs at baseline? Year 0, not concerenced about year 1 and year 2 users
+
+All model adjustments
+- age, bmi, smoking, education, race/ethnicity, adherence
+
+Hard drug use could influence medication adherence, any differences in outcomes for hard drug users versus not hard drug users explain adherence issues
+
+Biologically implausible or assay limits?
+- Ranges are in data dictionary, can bring up any outliers
+
+Refuse to answer
+- technically missing
+
+CD4 T-cell counts: 
+Viral load: treated near zero, untreated all over
+QoL: 1-100
+
+# Initial Data Analysis Plan
+
+Simple linear regression
+- 4 models: viral load, CD4+ T cell count, Physical Quality of Life, Mental Quality of life
+- adjust for year
+- 
+
+
+Bayesian Analysis
+- 
+
+
+
+
+
+
+
+
+
+
 
 
 
