@@ -39,6 +39,8 @@ These scores range from 0 to 100, with higher scores indicating better quality o
 
 We are not sure what happens to quality of life after initiating treatment - while in theory subjects’ improving health should result in increased quality of life, the side effects of these treatments are significant.  If subjects experience declines in quality of life after initiating treatment we would be concerned that they would stop treatment.
 
+Some of our colleague’s statistical team has been doing their analysis Bayesian.  We are requesting that the analysis be done in both a Bayesian and non-Bayesian framework and compared.
+
 
 
 
