@@ -46,6 +46,10 @@ missing <- is.na(hivdat$VLOAD) |
 
 hivclean <- hivdat[!missing, ]
 
+# Truncating at year 2
+
+hivclean <- hivclean[hivclean$years <= 2,]
+
 
 # Looking at descriptive statistics
 baseline <- hivclean[hivclean$year == 0, ]

@@ -49,6 +49,9 @@ Only interested in hard drugs at baseline? Year 0, not concerenced about year 1 
 All model adjustments
 - age, bmi, smoking, education, race/ethnicity, adherence
 
+Adherence
+- if there is a difference in 
+
 Hard drug use could influence medication adherence, any differences in outcomes for hard drug users versus not hard drug users explain adherence issues
 
 Biologically implausible or assay limits?
