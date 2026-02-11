@@ -57,7 +57,7 @@ Hard drug use could influence medication adherence, any differences in outcomes 
 Biologically implausible or assay limits?
 - Ranges are in data dictionary, can bring up any outliers
 
-Refuse to answer
+ Drug use Refuse to answer
 - technically missing
 
 CD4 T-cell counts: 
@@ -68,7 +68,7 @@ QoL: 1-100
 
 Simple linear regression
 - 4 models: viral load, CD4+ T cell count, Physical Quality of Life, Mental Quality of life
-- adjust for year
+- age, bmi, smoking, education, race/ethnicity, adherence
 - 
 
 

@@ -131,6 +131,80 @@ legend("right", inset = -0.30, legend = colnames(mean_mqol),
        col = c("deeppink4", "red"), lwd = 2, xpd = TRUE)
 
 
+# Frequentist Analysis
+
+# Viral load
+
+mod1 <- lm(VLOAD ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
+
+summary(mod1)
+
+par(mfrow = c(2, 2))
+plot(mod1)
+par(mfrow = c(1, 1))
+
+
+# CD4 T-cell
+
+mod2 <- lm(LEU3N ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
+
+summary(mod2)
+
+par(mfrow = c(2, 2))
+plot(mod2)
+par(mfrow = c(1, 1))
+
+# Physical QoL
+
+mod3 <- lm(AGG_PHYS ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
+
+summary(mod3)
+
+par(mfrow = c(2, 2))
+plot(mod3)
+par(mfrow = c(1, 1))
+
+# Mental QoL
+
+mod4 <- lm(AGG_MENT ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
+
+summary(mod4)
+
+par(mfrow = c(2, 2))
+plot(mod4)
+par(mfrow = c(1, 1))
+
+
+# Summary of all 4 frequentist models
+
+# Extract coefficients
+mod1_coef <- summary(mod1)$coefficients["hard_drugsHard Drug User", ]
+mod2_coef <- summary(mod2)$coefficients["hard_drugsHard Drug User", ]
+mod3_coef <- summary(mod3)$coefficients["hard_drugsHard Drug User", ]
+mod4_coef <- summary(mod4)$coefficients["hard_drugsHard Drug User", ]
+
+# Extract confidence intervals
+mod1_ci <- confint(mod1)["hard_drugsHard Drug User", ]
+mod2_ci <- confint(mod2)["hard_drugsHard Drug User", ]
+mod3_ci <- confint(mod3)["hard_drugsHard Drug User", ]
+mod4_ci <- confint(mod4)["hard_drugsHard Drug User", ]
+
+# Combine into one table
+results_table <- data.frame(
+  Outcome = c("Viral Load", "CD4 Count", "Physical QoL", "Mental QoL"),
+  Estimate = c(mod1_coef[1], mod2_coef[1], mod3_coef[1], mod4_coef[1]),
+  Std_Error = c(mod1_coef[2], mod2_coef[2], mod3_coef[2], mod4_coef[2]),
+  t_value = c(mod1_coef[3], mod2_coef[3], mod3_coef[3], mod4_coef[3]),
+  p_value = c(mod1_coef[4], mod2_coef[4], mod3_coef[4], mod4_coef[4]),
+  CI_lower = c(mod1_ci[1], mod2_ci[1], mod3_ci[1], mod4_ci[1]),
+  CI_upper = c(mod1_ci[2], mod2_ci[2], mod3_ci[2], mod4_ci[2])
+)
+
+# Round for readability
+results_table[, -1] <- round(results_table[, -1], 4)
+
+results_table
+
 
 
 
