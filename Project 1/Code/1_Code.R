@@ -5,6 +5,7 @@ library(mcmcse)
 library(loo)
 library(MASS)
 library(knitr)
+library(kableExtra)
 library(emmeans)
 library(tidyr)
 library(ggplot2)
@@ -98,7 +99,7 @@ hivdat <- merge(hivdat, baseline_drugs, by = "newid", all.x = TRUE)
 # rename outcomes to _base so don't get confusing
 dat_yr0 <- hivdat[hivdat$year == 0,
                   c("newid", "hard_drugs_baseline",
-                    "age", "BMI", "SMOKE", "EDUCBAS", "RACE", "ADH",
+                    "age", "BMI", "SMOKE", "EDUCBAS", "RACE",
                     "VLOAD", "LEU3N", "AGG_PHYS", "AGG_MENT")]
 
 names(dat_yr0)[names(dat_yr0) == "VLOAD"]    <- "VLOAD_base"
@@ -108,7 +109,7 @@ names(dat_yr0)[names(dat_yr0) == "AGG_MENT"] <- "AGG_MENT_base"
 
 # Year 2: keep only the id and outcome columns
 dat_yr2 <- hivdat[hivdat$year == 2,
-                  c("newid", "VLOAD", "LEU3N", "AGG_PHYS", "AGG_MENT")]
+                  c("newid", "VLOAD", "LEU3N", "AGG_PHYS", "AGG_MENT", "ADH")]
 
 # Verify no overlapping names before merging (should only show "newid")
 intersect(names(dat_yr2), names(dat_yr0))
@@ -184,48 +185,44 @@ check_distribution(analytic$AGG_MENT,     "Mental QoL (raw)",   "deeppink4")
 # From these use log_viral load, regular CD4, and log both mental/physical QoL
 
 
+# Convert categoricals to factors in the analytic dataset
+analytic$SMOKE   <- factor(analytic$SMOKE)
+analytic$EDUCBAS <- factor(analytic$EDUCBAS)
+analytic$RACE    <- factor(analytic$RACE)
+analytic$ADH     <- factor(analytic$ADH)
 
 
-# Viral load
 
-mod1 <- lm(VLOAD ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
 
+# Frequentist models
+
+# Viral Load (log10 transformed) 
+mod1 <- lm(log10(VLOAD + 1) ~ hard_drugs_baseline + log10(VLOAD_base + 1) +
+             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+           data = analytic)
 summary(mod1)
+par(mfrow = c(2, 2)); plot(mod1); par(mfrow = c(1, 1))
 
-par(mfrow = c(2, 2))
-plot(mod1)
-par(mfrow = c(1, 1))
-
-
-# CD4 T-cell
-
-mod2 <- lm(LEU3N ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
-
+#  CD4 Count (untransformed)
+mod2 <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
+             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+           data = analytic)
 summary(mod2)
+par(mfrow = c(2, 2)); plot(mod2); par(mfrow = c(1, 1))
 
-par(mfrow = c(2, 2))
-plot(mod2)
-par(mfrow = c(1, 1))
-
-# Physical QoL
-
-mod3 <- lm(AGG_PHYS ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
-
+# Physical QoL (reflected log)
+mod3 <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
+             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+           data = analytic)
 summary(mod3)
+par(mfrow = c(2, 2)); plot(mod3); par(mfrow = c(1, 1))
 
-par(mfrow = c(2, 2))
-plot(mod3)
-par(mfrow = c(1, 1))
-
-# Mental QoL
-
-mod4 <- lm(AGG_MENT ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
-
+# Mental QoL (reflected log) 
+mod4 <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+           data = analytic)
 summary(mod4)
-
-par(mfrow = c(2, 2))
-plot(mod4)
-par(mfrow = c(1, 1))
+par(mfrow = c(2, 2)); plot(mod4); par(mfrow = c(1, 1))
 
 
 # Summary of all 4 frequentist models
