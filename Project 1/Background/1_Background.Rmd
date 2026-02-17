@@ -73,7 +73,10 @@ Simple linear regression
 
 
 Bayesian Analysis
-- 
+- DIC, WAIC, LOO-CV, second two recommended more vs first checking MCMC
+- loo package has function loo
+- waic function
+- DIC have to calculate by hand
 
 
 

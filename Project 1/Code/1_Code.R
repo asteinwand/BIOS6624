@@ -52,17 +52,19 @@ hivclean <- hivclean[hivclean$years <= 2,]
 
 
 # Looking at descriptive statistics
-baseline <- hivclean[hivclean$year == 0, ]
+# baseline <- hivclean[hivclean$year == 0, ]
 
-aggregate(cbind(VLOAD, LEU3N, AGG_PHYS, AGG_MENT) ~ hard_drugs,
+# aggregate(cbind(VLOAD, LEU3N, AGG_PHYS, AGG_MENT) ~ hard_drugs,
           data = baseline,
           FUN = function(x) c(mean = mean(x), median = median(x)))
 
 
-yr2 <- hivclean[hivclean$year == 2, ]
-aggregate(cbind(VLOAD, LEU3N, AGG_PHYS, AGG_MENT) ~ hard_drugs,
+# yr2 <- hivclean[hivclean$year == 2, ]
+# aggregate(cbind(VLOAD, LEU3N, AGG_PHYS, AGG_MENT) ~ hard_drugs,
           data = yr2,
           FUN = function(x) c(mean = mean(x), median = median(x)))
+
+
 
 # Creating graphics to visualize them
 
@@ -133,6 +135,27 @@ legend("right", inset = -0.30, legend = colnames(mean_mqol),
 
 # Frequentist Analysis
 
+# Creating baseline variables for the analysis
+baseline_drugs <- hivdat[hivdat$year == 0, c("newid", "hard_drugs")]
+names(baseline_drugs)[2] <- "hard_drugs_baseline"
+hivdat <- merge(hivdat, baseline_drugs, by = "newid", all.x = TRUE)
+
+# Pull Year 0 covariates and baseline outcome values
+dat_yr0 <- hivdat[hivdat$year == 0,
+                  c("newid", "hard_drugs_baseline", "age", "BMI",
+                    "SMOKE", "EDUCBAS", "RACE", "ADH",
+                    "VLOAD", "LEU3N", "AGG_PHYS", "AGG_MENT")]
+# Rename baseline outcomes
+names(dat_yr0)[5:8] <- c("VLOAD_base", "LEU3N_base", "AGG_PHYS_base", "AGG_MENT_base")
+
+# Pull Year 2 outcomes
+dat_yr2 <- hivdat[hivdat$year == 2, c("newid", "VLOAD", "LEU3N", "AGG_PHYS", "AGG_MENT")]
+
+# One row per subject
+analytic <- merge(dat_yr2, dat_yr0, by = "newid")
+
+# Determining what needs to be log transformed
+
 # Viral load
 
 mod1 <- lm(VLOAD ~ hard_drugs + age + BMI + SMOKE + EDUCBAS + RACE + ADH, data = hivclean)
@@ -142,6 +165,9 @@ summary(mod1)
 par(mfrow = c(2, 2))
 plot(mod1)
 par(mfrow = c(1, 1))
+
+
+### HORRENDOUS FIT WITH OUTLIER FIX IT DUMMY ###
 
 
 # CD4 T-cell
@@ -201,7 +227,7 @@ results_table <- data.frame(
 )
 
 # Round for readability
-results_table[, -1] <- round(results_table[, -1], 4)
+results_table[, -1] <- round(results_table[, -1], 3)
 
 results_table
 
