@@ -227,33 +227,52 @@ par(mfrow = c(2, 2)); plot(mod4); par(mfrow = c(1, 1))
 
 # Summary of all 4 frequentist models
 
-# Extract coefficients
-mod1_coef <- summary(mod1)$coefficients["hard_drugsHard Drug User", ]
-mod2_coef <- summary(mod2)$coefficients["hard_drugsHard Drug User", ]
-mod3_coef <- summary(mod3)$coefficients["hard_drugsHard Drug User", ]
-mod4_coef <- summary(mod4)$coefficients["hard_drugsHard Drug User", ]
+# extract results from one model function
+extract_results <- function(mod, outcome_label) {
+  coef_row <- summary(mod)$coefficients["hard_drugs_baselineHard Drug User", ]
+  ci_row   <- confint(mod)["hard_drugs_baselineHard Drug User", ]
+  data.frame(
+    Outcome   = outcome_label,
+    Estimate  = round(coef_row[1], 3),
+    SE        = round(coef_row[2], 3),
+    t         = round(coef_row[3], 3),
+    p         = round(coef_row[4], 4),
+    CI_Lower  = round(ci_row[1], 3),
+    CI_Upper  = round(ci_row[2], 3)
+  )
+}
 
-# Extract confidence intervals
-mod1_ci <- confint(mod1)["hard_drugsHard Drug User", ]
-mod2_ci <- confint(mod2)["hard_drugsHard Drug User", ]
-mod3_ci <- confint(mod3)["hard_drugsHard Drug User", ]
-mod4_ci <- confint(mod4)["hard_drugsHard Drug User", ]
-
-# Combine into one table
-results_table <- data.frame(
-  Outcome = c("Viral Load", "CD4 Count", "Physical QoL", "Mental QoL"),
-  Estimate = c(mod1_coef[1], mod2_coef[1], mod3_coef[1], mod4_coef[1]),
-  Std_Error = c(mod1_coef[2], mod2_coef[2], mod3_coef[2], mod4_coef[2]),
-  t_value = c(mod1_coef[3], mod2_coef[3], mod3_coef[3], mod4_coef[3]),
-  p_value = c(mod1_coef[4], mod2_coef[4], mod3_coef[4], mod4_coef[4]),
-  CI_lower = c(mod1_ci[1], mod2_ci[1], mod3_ci[1], mod4_ci[1]),
-  CI_upper = c(mod1_ci[2], mod2_ci[2], mod3_ci[2], mod4_ci[2])
+results_table <- rbind(
+  extract_results(mod1, "Viral Load (log10)"),
+  extract_results(mod2, "CD4 Count"),
+  extract_results(mod3, "Physical QoL (reflected log)"),
+  extract_results(mod4, "Mental QoL (reflected log)")
 )
 
-# Round for readability
-results_table[, -1] <- round(results_table[, -1], 3)
+# Format p-values so very small ones display nicely
+results_table$p <- ifelse(results_table$p < 0.001, "<0.001",
+                          as.character(results_table$p))
 
-results_table
+# Combine CI into one column for cleaner table
+results_table$`95% CI` <- paste0("(", results_table$CI_Lower,
+                                 ", ", results_table$CI_Upper, ")")
+results_table$CI_Lower <- NULL
+results_table$CI_Upper <- NULL
+
+kable(results_table,
+      row.names = FALSE,
+      caption   = "Frequentist Results: Effect of Baseline Hard Drug Use on Year 2 Outcomes",
+      booktabs  = TRUE,
+      align     = c("l", "r", "r", "r", "r", "r")) %>%
+  kable_styling(latex_options = c("striped", "hold_position"),
+                full_width    = FALSE) 
+
+
+# Estimates for log-transformed outcomes represent differences on the log scale. 
+# For viral load, exp(estimate) gives the fold-change in copies/mL.", 
+# For QoL outcomes, positive estimates indicate worse quality of life due to reflection of scale.
+
+
 
 
 
