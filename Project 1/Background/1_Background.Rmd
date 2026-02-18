@@ -80,6 +80,56 @@ Bayesian Analysis
 
 
 
+# Analysis Presentation Notes
+
+- Bayesian trace plots 4MCM chains 4k iterations
+- Separate files for exploratory vs final analysis for code
+- Adherence - could outcomes be related to adherence, stratified by drug use??? Mediation analysis?
+fit models with adherence and without adherence and then compare the models
+
+
+- Table 1 notes negative BMIs and exceeding 250, missing values for outcomes and covariates
+matched baseline visits to year 2 visits
+Label that includes information that missing has been removed prior to Table 1
+
+- Missingness for outcomes if they are missing ANY outcomes remove them from the whole dataset so they have all 4 outcomes at year 2 so consistent n values for each analysis
+
+- Race/Ethnicity - Non-hispanic white and other
+- Education - 4 years of college/college degree and then below (2 groups)
+- log10 viral load! Woot already did that. Gold star to me
+
+
+Clinically meaningful outcomes
+- viral load 0.5log10 change
+- cd4 count 50 cell change - expect CD4 counts to go up 
+- QoL scores 2 point change
+
+
+Reproducible Research - Ella
+- announcement on canvas
+- start labeling commits with which project to track easier
+- create separate files for final versions of code
+
+# Notes from P0 to bring into P1
+- Not enough detail in the methods
+- justify and explain modeling choices
+- why choose different variables
+- if you are removing or excluding why are you removing, which model are they removed from
+- keeping track of sample size: how many observations and subjects were used for each analysis/model
+- tables/figures: captions and legends with descriptive labels, 
+flow charts to show exclusions for ppt and appendix
+Table 1 you absolute idiot!! 
+
+- point estimates
+
+
+
+
+
+
+
+
+
 
 
 
