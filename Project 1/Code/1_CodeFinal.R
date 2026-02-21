@@ -15,74 +15,6 @@ library(grid)
 
 hivdat <gridhivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
 
-
-# Creating graphics to visualize them
-
-# Viral load
-mean_vl <- tapply(hivdat$VLOAD,
-                  list(hivdat$year, hivdat$hard_drugs),
-                  mean)
-
-matplot(as.numeric(rownames(mean_vl)), mean_vl,
-        type = "l", lwd = 2, lty = 1,
-        col = c("cornflowerblue", "red"),
-        xlab = "Years Since HAART Initiation",
-        ylab = "Mean Viral Load",
-        main = "Viral Load Over Time by Drug Use")
-
-legend("right", inset = -0.30, legend = colnames(mean_vl),
-       col = c("cornflowerblue", "red"), lwd = 2, xpd = TRUE)
-
-
-
-# CD4 
-mean_cd4 <- tapply(hivdat$LEU3N,
-                  list(hivdat$year, hivdat$hard_drugs),
-                  mean)
-
-matplot(as.numeric(rownames(mean_cd4)), mean_cd4,
-        type = "l", lwd = 2, lty = 1,
-        col = c("aquamarine2", "red"),
-        xlab = "Years Since HAART Initiation",
-        ylab = "Mean CD4 Count",
-        main = "CD4 Count Over Time by Drug Use")
-
-legend("right", inset = -0.30, legend = colnames(mean_cd4),
-       col = c("aquamarine2", "red"), lwd = 2, xpd = TRUE)
-
-
-# Physical Quality of Life Score
-mean_pqol <- tapply(hivdat$AGG_PHYS,
-                   list(hivdat$year, hivdat$hard_drugs),
-                   mean)
-
-matplot(as.numeric(rownames(mean_pqol)), mean_pqol,
-        type = "l", lwd = 2, lty = 1,
-        col = c("darkorchid", "red"),
-        xlab = "Years Since HAART Initiation",
-        ylab = "Mean Physical Quality of Life",
-        main = "Physical Quality of Life Over Time by Drug Use")
-
-legend("right", inset = -0.30, legend = colnames(mean_pqol),
-       col = c("darkorchid", "red"), lwd = 2, xpd = TRUE)
-
-
-# Mental Quality of Life Score
-mean_mqol <- tapply(hivdat$AGG_MENT,
-                    list(hivdat$year, hivdat$hard_drugs),
-                    mean)
-
-matplot(as.numeric(rownames(mean_mqol)), mean_mqol,
-        type = "l", lwd = 2, lty = 1,
-        col = c("deeppink4", "red"),
-        xlab = "Years Since HAART Initiation",
-        ylab = "Mean Mental Quality of Life",
-        main = "Mental Quality of Life Over Time by Drug Use")
-
-legend("right", inset = -0.30, legend = colnames(mean_mqol),
-       col = c("deeppink4", "red"), lwd = 2, xpd = TRUE)
-
-
 # Frequentist Analysis
 
 # Prelim Data Preparation
@@ -152,8 +84,6 @@ analytic$RACE    <- droplevels(factor(analytic$RACE))
 analytic$ADH     <- droplevels(factor(analytic$ADH))
 analytic$hard_drugs_baseline <- droplevels(factor(analytic$hard_drugs_baseline))
 
-
-
 # Determining what needs to be log transformed with diagnostic plots
 # Creating a function to do it for each variable rather than individually
 
@@ -218,16 +148,6 @@ check_distribution(analytic$AGG_MENT,     "Mental QoL (raw)",   "deeppink4")
 
 # From these use log_viral load, regular CD4, and log both mental/physical QoL
 
-
-# Convert categoricals to factors in the analytic dataset
-analytic$SMOKE   <- factor(analytic$SMOKE)
-analytic$EDUCBAS <- factor(analytic$EDUCBAS)
-analytic$RACE    <- factor(analytic$RACE)
-analytic$ADH     <- factor(analytic$ADH)
-
-
-
-
 # Frequentist models
 
 # a is WITHOUT adherence
@@ -235,43 +155,38 @@ analytic$ADH     <- factor(analytic$ADH)
 
 # Viral Load (log10 transformed) 
 mod1a <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
+              age + BMI + SMOKE + EDUCBAS + RACE,
+            data = analytic)
 mod1b <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
               age + BMI + SMOKE + EDUCBAS + RACE + ADH,
             data = analytic)
-summary(mod1)
-par(mfrow = c(2, 2)); plot(mod1); par(mfrow = c(1, 1))
+
 
 #  CD4 Count (untransformed)
 mod2a <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
+              age + BMI + SMOKE + EDUCBAS + RACE,
+            data = analytic)
 mod2b <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
-           data = analytic)
-summary(mod2)
-par(mfrow = c(2, 2)); plot(mod2); par(mfrow = c(1, 1))
+              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+            data = analytic)
+
 
 # Physical QoL (reflected log)
 mod3a <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
+              age + BMI + SMOKE + EDUCBAS + RACE,
+            data = analytic)
 mod3b <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
-           data = analytic)
-summary(mod3)
-par(mfrow = c(2, 2)); plot(mod3); par(mfrow = c(1, 1))
+              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+            data = analytic)
+
 
 # Mental QoL (reflected log) 
 mod4a <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
+              age + BMI + SMOKE + EDUCBAS + RACE,
+            data = analytic)
 mod4b <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
-           data = analytic)
-summary(mod4)
-par(mfrow = c(2, 2)); plot(mod4); par(mfrow = c(1, 1))
+              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+            data = analytic)
 
 
 # Summary of all 4 frequentist models
@@ -322,11 +237,4 @@ kable(results_table,
   pack_rows("CD4 Count", 3, 4) %>%
   pack_rows("Physical Quality of Life (reflected log)", 5, 6) %>%
   pack_rows("Mental Quality of Life (reflected log)", 7, 8)
-
-
-
-# Estimates for log-transformed outcomes represent differences on the log scale. 
-# For viral load, exp(estimate) gives the fold-change in copies/mL.", 
-# For QoL outcomes, positive estimates indicate worse quality of life due to reflection of scale.
-
 
