@@ -196,29 +196,44 @@ analytic$ADH     <- factor(analytic$ADH)
 
 # Frequentist models
 
+# a is WITHOUT adherence
+# b is WITH adherence
+
 # Viral Load (log10 transformed) 
-mod1 <- lm(log10(VLOAD + 1) ~ hard_drugs_baseline + log10(VLOAD_base + 1) +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+mod1a <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
+             age + BMI + SMOKE + EDUCBAS + RACE,
            data = analytic)
+mod1b <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
+              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+            data = analytic)
 summary(mod1)
 par(mfrow = c(2, 2)); plot(mod1); par(mfrow = c(1, 1))
 
 #  CD4 Count (untransformed)
-mod2 <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
+mod2a <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
+             age + BMI + SMOKE + EDUCBAS + RACE,
+           data = analytic)
+mod2b <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
            data = analytic)
 summary(mod2)
 par(mfrow = c(2, 2)); plot(mod2); par(mfrow = c(1, 1))
 
 # Physical QoL (reflected log)
-mod3 <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
+mod3a <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
+             age + BMI + SMOKE + EDUCBAS + RACE,
+           data = analytic)
+mod3b <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
            data = analytic)
 summary(mod3)
 par(mfrow = c(2, 2)); plot(mod3); par(mfrow = c(1, 1))
 
 # Mental QoL (reflected log) 
-mod4 <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+mod4a <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+             age + BMI + SMOKE + EDUCBAS + RACE,
+           data = analytic)
+mod4b <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
            data = analytic)
 summary(mod4)
@@ -235,7 +250,6 @@ extract_results <- function(mod, outcome_label) {
     Outcome   = outcome_label,
     Estimate  = round(coef_row[1], 3),
     SE        = round(coef_row[2], 3),
-    t         = round(coef_row[3], 3),
     p         = round(coef_row[4], 4),
     CI_Lower  = round(ci_row[1], 3),
     CI_Upper  = round(ci_row[2], 3)
@@ -243,10 +257,14 @@ extract_results <- function(mod, outcome_label) {
 }
 
 results_table <- rbind(
-  extract_results(mod1, "Viral Load (log10)"),
-  extract_results(mod2, "CD4 Count"),
-  extract_results(mod3, "Physical QoL (reflected log)"),
-  extract_results(mod4, "Mental QoL (reflected log)")
+  extract_results(mod1a, "Viral Load (log10) - No ADH"),
+  extract_results(mod1b, "Viral Load (log10) - With ADH"),
+  extract_results(mod2a, "CD4 Count - No ADH"),
+  extract_results(mod2b, "CD4 Count - With ADH"),
+  extract_results(mod3a, "Physical QoL (refl log) - No ADH"),
+  extract_results(mod3b, "Physical QoL (refl log) - With ADH"),
+  extract_results(mod4a, "Mental QoL (refl log) - No ADH"),
+  extract_results(mod4b, "Mental QoL (refl log) - With ADH")
 )
 
 # Format p-values so very small ones display nicely
@@ -261,11 +279,16 @@ results_table$CI_Upper <- NULL
 
 kable(results_table,
       row.names = FALSE,
-      caption   = "Frequentist Results: Effect of Baseline Hard Drug Use on Year 2 Outcomes",
+      caption   = "Effect of Baseline Hard Drug Use on Year 2 Outcomes: With and Without Adherence Adjustment",
       booktabs  = TRUE,
-      align     = c("l", "r", "r", "r", "r", "r")) %>%
+      align     = c("l", "r", "r", "r", "r")) %>%
   kable_styling(latex_options = c("striped", "hold_position"),
-                full_width    = FALSE) 
+                full_width    = FALSE) %>%
+  pack_rows("Viral Load (log10)", 1, 2) %>%
+  pack_rows("CD4 Count", 3, 4) %>%
+  pack_rows("Physical Quality of Life (reflected log)", 5, 6) %>%
+  pack_rows("Mental Quality of Life (reflected log)", 7, 8)
+
 
 
 # Estimates for log-transformed outcomes represent differences on the log scale. 
