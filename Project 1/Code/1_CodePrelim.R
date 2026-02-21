@@ -769,8 +769,84 @@ fit_ment$cmdstan_diagnose()
 
 
 
+# Looking at Trace plots
+
+# Model 1: Viral Load
+draws_vload <- as_draws_array(fit_vload$draws())
+params_trace <- c("beta[2]", "sigma")
+mcmc_trace(draws_vload, pars = params_trace)
+
+# Model 2: CD4
+draws_cd4 <- as_draws_array(fit_cd4$draws())
+mcmc_trace(draws_cd4, pars = params_trace)
+
+# Model 3: Physical QoL
+draws_phys <- as_draws_array(fit_phys$draws())
+mcmc_trace(draws_phys, pars = params_trace)
+
+# Model 4: Mental QoL
+draws_ment <- as_draws_array(fit_ment$draws())
+mcmc_trace(draws_ment, pars = params_trace)
 
 
+## Table results of bayesian
+
+# Extract hard drug coefficient (beta[2]) from each model
+extract_bayesian_results <- function(fit, model_name) {
+  draws_mat <- as_draws_matrix(fit$draws())
+  
+  # beta[2] is hard_drugs_baseline (adjust index if needed)
+  drug_coef <- draws_mat[, "beta[2]"]
+  
+  # Calculate summary statistics
+  hpd <- hdi(drug_coef, ci = 0.95)
+  
+  data.frame(
+    Model = model_name,
+    Estimate = mean(drug_coef),
+    Std_Dev = sd(drug_coef),
+    HPDI_2.5 = hpd$CI_low,
+    HPDI_97.5 = hpd$CI_high,
+    ESS = ess_bulk(drug_coef),
+    Rhat = rhat(drug_coef)
+  )
+}
+
+# Build table
+bayesian_results <- rbind(
+  extract_bayesian_results(fit_vload, "Viral Load (log10)"),
+  extract_bayesian_results(fit_cd4, "CD4 Count"),
+  extract_bayesian_results(fit_phys, "Physical QoL (refl log)"),
+  extract_bayesian_results(fit_ment, "Mental QoL (refl log)")
+)
+
+# Round for display
+bayesian_results$Estimate <- round(bayesian_results$Estimate, 3)
+bayesian_results$Std_Dev <- round(bayesian_results$Std_Dev, 3)
+bayesian_results$HPDI_2.5 <- round(bayesian_results$HPDI_2.5, 3)
+bayesian_results$HPDI_97.5 <- round(bayesian_results$HPDI_97.5, 3)
+bayesian_results$ESS <- round(bayesian_results$ESS, 0)
+bayesian_results$Rhat <- round(bayesian_results$Rhat, 3)
+
+# Combine HPDI into one column
+bayesian_results$`95% HPDI` <- paste0("(", bayesian_results$HPDI_2.5, 
+                                      ", ", bayesian_results$HPDI_97.5, ")")
+bayesian_results$HPDI_2.5 <- NULL
+bayesian_results$HPDI_97.5 <- NULL
+
+# Create nice table
+kable(bayesian_results,
+      row.names = FALSE,
+      caption = "Bayesian Results: Effect of Baseline Hard Drug Use on Year 2 Outcomes",
+      booktabs = TRUE,
+      align = c("l", "r", "r", "r", "r", "r")) %>%
+  kable_styling(latex_options = c("striped", "hold_position"),
+                full_width = FALSE) %>%
+  footnote(general = "HPDI = Highest Posterior Density Interval. ESS = Effective Sample Size. Rhat < 1.01 indicates convergence.",
+           general_title = "Note: ",
+           footnote_as_chunk = TRUE)
+
+print(bayesian_results)
 
 
 
