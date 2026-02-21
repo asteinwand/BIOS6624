@@ -83,6 +83,11 @@ Bayesian Analysis
 # Analysis Presentation Notes
 
 - Bayesian trace plots 4MCM chains 4k iterations
+Viral load (log10): N(0, 2)
+CD4 count: N(0, 100)
+QoL (reflected log): N(0, 2)
+Residual SD: half-Normal(0, 5)
+
 - Separate files for exploratory vs final analysis for code
 
 - Adherence - could outcomes be related to adherence, stratified by drug use???

@@ -16,6 +16,10 @@ library(grid)
 hivdat <gridhivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
 
 
+#####################################################################
+# TABLE 1
+####################################################################
+
 # Creating graphics to visualize them
 
 # Viral load
@@ -324,9 +328,174 @@ kable(results_table,
   pack_rows("Mental Quality of Life (reflected log)", 7, 8)
 
 
+### ADH DID NOT MAKE A DIFFERENCE ### REMOVED FROM FURTHER ANALYSIS
+
 
 # Estimates for log-transformed outcomes represent differences on the log scale. 
 # For viral load, exp(estimate) gives the fold-change in copies/mL.", 
-# For QoL outcomes, positive estimates indicate worse quality of life due to reflection of scale.
+# For QoL outcomes, positive estimates indicate worse quality of life due to reflection 
+# of scale.
+
+# Bayesian Analysis
+# Used Gleason Worksheet as a template
+
+# Dependencies 
+library(cmdstanr)
+library(bayesplot)  # diagnostic plots of the MCMC chains
+library(posterior)  # for summarizing posterior draws
+library(bayestestR) # for calculating highest density posterior intervals
+library(mcmcse)     # for calculating MCMCSE's
+library(loo)        # for getting model fit statistics (WAIC and LOO-IC)
+library(dplyr)
+library(tibble)
+
+###########################################################################
+# STEP 1: Define the Stan model
+# This is a general linear regression with half-normal prior on sigma
+# and normal priors on regression coefficients
+###########################################################################
+
+stan_file <- write_stan_file("data {
+  int<lower=0> N;                  // number of observations
+  int<lower=0> P;                  // number of predictors including intercept
+  matrix[N, P] X;                  // design matrix (first column = intercept)
+  vector[N] y;                     // outcome
+
+  vector[P] prior_mean;            // prior means for each beta
+  vector<lower=0>[P] prior_sd;     // prior SDs for each beta
+
+  real<lower=0> sigma_prior_sd;    // SD for half-normal prior on sigma
+}
+
+parameters {
+  vector[P] beta;                  // regression coefficients
+  real<lower=0> sigma;             // residual SD
+}
+
+model {
+  // Vectorized priors for regression coefficients
+  beta ~ normal(prior_mean, prior_sd);
+
+  // Half-normal prior for sigma
+  sigma ~ normal(0, sigma_prior_sd);
+
+  // Likelihood
+  y ~ normal(X * beta, sigma);
+}
+
+generated quantities {
+  // log likelihood for each observation for calculating model fit stats
+  vector[N] log_lik;
+  for (n in 1:N) {
+    log_lik[n] = normal_lpdf(y[n] | X[n] * beta, sigma);
+  }
+}", dir="STAN", basename='linear_regression_half_normal')
+
+
+
+###########################################################################
+# STEP 2: Compile the Stan program
+###########################################################################
+
+mod <- cmdstan_model('STAN/linear_regression_half_normal.stan')
+
+###########################################################################
+# MODEL 1: VIRAL LOAD (log10)
+###########################################################################
+
+# Outcome data
+y <- log10(analytic$VLOAD)
+
+# Design matrix
+X <- model.matrix(~ hard_drugs_baseline + log10(VLOAD_base) +
+                    age + BMI + SMOKE + EDUCBAS + RACE, 
+                  data = analytic)
+
+N <- nrow(X)
+P <- ncol(X)
+
+# Priors: N(0, 2) for coefficients, half-Normal(0, 5) for sigma
+m <- c(mean(y), rep(0, P - 1))  # intercept gets outcome mean, rest get 0
+s <- c(10, 2, rep(2, P - 2))    # intercept gets 10, rest get 2
+sigma_sd <- 5
+
+# Data list for Stan
+data_vload <- list(
+  N = N,
+  P = P,
+  X = X,
+  y = y,
+  prior_mean = m,
+  prior_sd = s,
+  sigma_prior_sd = sigma_sd
+)
+
+# Fit model: 4 chains, 1000 warmup + 1000 sampling = 4000 post-warmup draws
+fit_vload <- mod$sample(
+  data = data_vload,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  seed = 123
+)
+
+# Posterior summary
+fit_vload$summary(variables = c("beta[1]", "beta[2]", "sigma"))
+
+# Detailed summary table
+draws_vload <- fit_vload$draws()
+draws_mat_vload <- as_draws_matrix(draws_vload)
+params_vload <- colnames(draws_mat_vload)
+params_vload <- params_vload[!grepl("lp__|log_lik", params_vload)]
+
+summary_vload <- lapply(params_vload, function(p) {
+  vals <- as.numeric(draws_mat_vload[, p])
+  mcse_val <- mcmcse::mcse(vals)$se
+  ess_val <- ess_bulk(vals)
+  hpd <- hdi(vals, ci = 0.95)
+  
+  tibble(
+    Parameter = p,
+    Estimate  = mean(vals),
+    MCSE      = mcse_val,
+    Std_Dev   = sd(vals),
+    HPDI_2.5  = hpd$CI_low,
+    HPDI_97.5 = hpd$CI_high,
+    ESS       = ess_val,
+    Rhat      = rhat(vals)
+  )
+}) %>% bind_rows()
+
+print(summary_vload)
+
+# Check diagnostics
+cat("\nMCSE < 6% of SD:", all((100 * summary_vload$MCSE / summary_vload$Std_Dev) < 6), "\n")
+cat("ESS > 1000:", all(summary_vload$ESS > 1000), "\n")
+cat("Rhat < 1.01:", all(summary_vload$Rhat < 1.01), "\n")
+
+# Model fit statistics
+loglik_vload <- as_draws_matrix(fit_vload$draws("log_lik"))
+loo_vload <- loo(loglik_vload)
+waic_vload <- waic(loglik_vload)
+
+
+print(waic_vload)
+print(loo_vload)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
