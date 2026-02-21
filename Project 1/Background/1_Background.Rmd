@@ -84,7 +84,8 @@ Bayesian Analysis
 
 - Bayesian trace plots 4MCM chains 4k iterations
 - Separate files for exploratory vs final analysis for code
-- Adherence - could outcomes be related to adherence, stratified by drug use??? Mediation analysis?
+
+- Adherence - could outcomes be related to adherence, stratified by drug use???
 fit models with adherence and without adherence and then compare the models
 
 

@@ -11,15 +11,10 @@ library(tidyr)
 library(ggplot2)
 library(gridExtra)
 library(lme4)
+library(grid)
 
-hivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
+hivdat <gridhivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
 
-# Some Prelim Data Preparation
-
-# COnverting hard drugs to a factor 
-hivdat$hard_drugs <- factor(hivdat$hard_drugs,
-                          levels = c(0,1),
-                          labels = c("No Hard Drugs", "Hard Drug User"))
 
 # Creating graphics to visualize them
 
@@ -90,6 +85,27 @@ legend("right", inset = -0.30, legend = colnames(mean_mqol),
 
 # Frequentist Analysis
 
+# Prelim Data Preparation
+
+# subject number tracking
+n_start <- nrow(hivdat)
+
+# fixing covariates
+#BMI
+n_bad_bmi <- sum(hivdat$BMI < 0 | hivdat$BMI > 250, na.rm = TRUE)
+hivdat$BMI[hivdat$BMI < 0 | hivdat$BMI > 250] <- NA
+
+# COnverting  to a factor for analysis
+hivdat$hard_drugs <- factor(hivdat$hard_drugs,
+                            levels = c(0,1),
+                            labels = c("No Hard Drugs", "Hard Drug User"))
+hivdat$SMOKE   <- factor(hivdat$SMOKE)
+hivdat$EDUCBAS <- factor(hivdat$EDUCBAS)
+hivdat$RACE    <- factor(hivdat$RACE)
+hivdat$ADH     <- factor(hivdat$ADH)
+
+
+
 # Creating baseline variables for the analysis
 baseline_drugs <- hivdat[hivdat$year == 0, c("newid", "hard_drugs")]
 names(baseline_drugs)[2] <- "hard_drugs_baseline"
@@ -115,8 +131,26 @@ dat_yr2 <- hivdat[hivdat$year == 2,
 intersect(names(dat_yr2), names(dat_yr0))
 
 # Now merge into one usable set
-analytic <- merge(dat_yr2, dat_yr0, by = "newid")
+# Continue tracking the n values for analysis
+n_yr0 <- nrow(dat_yr0)
+n_yr2 <- nrow(dat_yr2)
+analytic_all <- merge(dat_yr2, dat_yr0, by = "newid")
+n_both <- nrow(analytic_all)
+n_unmatched <- (n_yr0 + n_yr2) - (2 * n_both)
 
+
+# Remove the missing data
+n_before_missing <- nrow(analytic_all)
+analytic <- analytic_all[complete.cases(analytic_all), ]
+n_after_missing <- nrow(analytic)
+n_missing <- n_before_missing - n_after_missing
+
+#Reset factors
+analytic$SMOKE   <- droplevels(factor(analytic$SMOKE))
+analytic$EDUCBAS <- droplevels(factor(analytic$EDUCBAS))
+analytic$RACE    <- droplevels(factor(analytic$RACE))
+analytic$ADH     <- droplevels(factor(analytic$ADH))
+analytic$hard_drugs_baseline <- droplevels(factor(analytic$hard_drugs_baseline))
 
 
 
@@ -296,7 +330,80 @@ kable(results_table,
 # For QoL outcomes, positive estimates indicate worse quality of life due to reflection of scale.
 
 
+# =============================================================================
+# CONSORT FLOW DIAGRAM
+# =============================================================================
 
+library(ggplot2)
+library(grid)
+
+# Create the flow data
+flow_data <- data.frame(
+  step = 1:6,
+  label = c(
+    paste0("Total subjects in dataset\nN = ", n_start),
+    paste0("Subjects with Year 0 data\nN = ", n_yr0),
+    paste0("Subjects with Year 2 data\nN = ", n_yr2),
+    paste0("Matched subjects\n(have both Year 0 and Year 2)\nN = ", n_both),
+    paste0("After removing missing data\nN = ", n_after_missing),
+    paste0("Final analytic sample\nN = ", n_after_missing)
+  ),
+  excluded = c(
+    "",
+    "",
+    "",
+    paste0("Excluded: ", n_unmatched, "\n(unmatched visits)"),
+    paste0("Excluded: ", n_missing, "\n(missing data)"),
+    ""
+  ),
+  x = c(2, 2, 2, 2, 2, 2),
+  y = c(6, 5, 4, 3, 2, 1),
+  excluded_x = c(NA, NA, NA, 4, 4, NA),
+  excluded_y = c(NA, NA, NA, 3, 2, NA)
+)
+
+# Create plot
+png("consort_flow.png", width = 800, height = 1000, res = 120)
+
+plot(NULL, xlim = c(0, 6), ylim = c(0, 7), xlab = "", ylab = "", 
+     axes = FALSE, asp = 1)
+
+# Draw boxes
+for(i in 1:nrow(flow_data)) {
+  rect(flow_data$x[i] - 0.8, flow_data$y[i] - 0.3, 
+       flow_data$x[i] + 0.8, flow_data$y[i] + 0.3,
+       col = "lightblue", border = "black", lwd = 2)
+  text(flow_data$x[i], flow_data$y[i], flow_data$label[i], cex = 0.9)
+}
+
+# Draw exclusion boxes
+for(i in 1:nrow(flow_data)) {
+  if(!is.na(flow_data$excluded_x[i]) && flow_data$excluded[i] != "") {
+    rect(flow_data$excluded_x[i] - 0.6, flow_data$excluded_y[i] - 0.2,
+         flow_data$excluded_x[i] + 0.6, flow_data$excluded_y[i] + 0.2,
+         col = "lightcoral", border = "black", lwd = 1.5)
+    text(flow_data$excluded_x[i], flow_data$excluded_y[i], 
+         flow_data$excluded[i], cex = 0.8)
+  }
+}
+
+# Draw arrows
+for(i in 1:5) {
+  arrows(flow_data$x[i], flow_data$y[i] - 0.3, 
+         flow_data$x[i+1], flow_data$y[i+1] + 0.3,
+         length = 0.15, lwd = 2)
+}
+
+# Draw exclusion arrows
+arrows(2.8, 3, 3.4, 3, length = 0.1, lwd = 1.5, col = "red")
+arrows(2.8, 2, 3.4, 2, length = 0.1, lwd = 1.5, col = "red")
+
+title(main = "CONSORT Flow Diagram: Sample Selection", 
+      cex.main = 1.3, font.main = 2)
+
+dev.off()
+
+cat("\nFlow diagram saved as 'consort_flow.png'\n")
 
 
 
