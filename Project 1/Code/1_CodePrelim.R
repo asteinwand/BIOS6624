@@ -484,13 +484,288 @@ print(loo_vload)
 
 
 
+# MCMC Diagnostics
+draws_array_vload <- as_draws_array(fit_vload$draws())
+params_diag <- c("beta[1]", "beta[2]", "sigma")
+
+mcmc_trace(draws_array_vload, pars = params_diag)
+mcmc_dens_overlay(draws_array_vload, pars = params_diag)
+mcmc_acf(draws_array_vload, pars = params_diag)
+
+fit_vload$cmdstan_diagnose()
 
 
 
+###########################################################################
+# MODEL 2: CD4 COUNT
+###########################################################################
+
+# Outcome data
+y <- analytic$LEU3N
+
+# Design matrix
+X <- model.matrix(~ hard_drugs_baseline + LEU3N_base +
+                    age + BMI + SMOKE + EDUCBAS + RACE, 
+                  data = analytic)
+
+N <- nrow(X)
+P <- ncol(X)
+
+# Priors: N(0, 100) for coefficients, half-Normal(0, 5) for sigma
+m <- c(mean(y), rep(0, P - 1))
+s <- c(200, 100, rep(100, P - 2))  # intercept gets 200, rest get 100
+sigma_sd <- 5
+
+data_cd4 <- list(
+  N = N, P = P, X = X, y = y,
+  prior_mean = m, prior_sd = s,
+  sigma_prior_sd = sigma_sd
+)
+
+fit_cd4 <- mod$sample(
+  data = data_cd4,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  seed = 123
+)
+
+# Posterior summary
+fit_cd4$summary(variables = c("beta[1]", "beta[2]", "sigma"))
+
+# Detailed summary table
+draws_cd4 <- fit_cd4$draws()
+draws_mat_cd4 <- as_draws_matrix(draws_cd4)
+params_cd4 <- colnames(draws_mat_cd4)
+params_cd4 <- params_cd4[!grepl("lp__|log_lik", params_cd4)]
+
+summary_cd4 <- lapply(params_cd4, function(p) {
+  vals <- as.numeric(draws_mat_cd4[, p])
+  mcse_val <- mcmcse::mcse(vals)$se
+  ess_val <- ess_bulk(vals)
+  hpd <- hdi(vals, ci = 0.95)
+  
+  tibble(
+    Parameter = p,
+    Estimate  = mean(vals),
+    MCSE      = mcse_val,
+    Std_Dev   = sd(vals),
+    HPDI_2.5  = hpd$CI_low,
+    HPDI_97.5 = hpd$CI_high,
+    ESS       = ess_val,
+    Rhat      = rhat(vals)
+  )
+}) %>% bind_rows()
+
+print(summary_cd4)
+
+# Check diagnostics
+cat("\nMCSE < 6% of SD:", all((100 * summary_cd4$MCSE / summary_cd4$Std_Dev) < 6), "\n")
+cat("ESS > 1000:", all(summary_cd4$ESS > 1000), "\n")
+cat("Rhat < 1.01:", all(summary_cd4$Rhat < 1.01), "\n")
+
+# Model fit statistics
+loglik_cd4 <- as_draws_matrix(fit_cd4$draws("log_lik"))
+loo_cd4 <- loo(loglik_cd4)
+waic_cd4 <- waic(loglik_cd4)
+
+
+print(waic_cd4)
+print(loo_cd4)
 
 
 
+# MCMC Diagnostics
+draws_array_cd4 <- as_draws_array(fit_cd4$draws())
+params_diag <- c("beta[1]", "beta[2]", "sigma")
 
+mcmc_trace(draws_array_cd4, pars = params_diag)
+mcmc_dens_overlay(draws_array_cd4, pars = params_diag)
+mcmc_acf(draws_array_cd4, pars = params_diag)
+
+fit_cd4$cmdstan_diagnose()
+
+
+
+###########################################################################
+# MODEL 3: PHYSICAL QOL (reflected log)
+###########################################################################
+
+# Outcome data
+y <- log(101 - analytic$AGG_PHYS)
+
+# Design matrix
+X <- model.matrix(~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
+                    age + BMI + SMOKE + EDUCBAS + RACE, 
+                  data = analytic)
+
+N <- nrow(X)
+P <- ncol(X)
+
+# Priors: N(0, 2) for coefficients, half-Normal(0, 5) for sigma
+m <- c(mean(y), rep(0, P - 1))
+s <- c(10, 2, rep(2, P - 2))
+sigma_sd <- 5
+
+data_phys <- list(
+  N = N, P = P, X = X, y = y,
+  prior_mean = m, prior_sd = s,
+  sigma_prior_sd = sigma_sd
+)
+
+fit_phys <- mod$sample(
+  data = data_phys,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  seed = 123
+)
+
+# Posterior summary
+fit_phys$summary(variables = c("beta[1]", "beta[2]", "sigma"))
+
+# Detailed summary table
+draws_phys <- fit_phys$draws()
+draws_mat_phys <- as_draws_matrix(draws_phys)
+params_phys <- colnames(draws_mat_phys)
+params_phys <- params_phys[!grepl("lp__|log_lik", params_phys)]
+
+summary_phys <- lapply(params_phys, function(p) {
+  vals <- as.numeric(draws_mat_phys[, p])
+  mcse_val <- mcmcse::mcse(vals)$se
+  ess_val <- ess_bulk(vals)
+  hpd <- hdi(vals, ci = 0.95)
+  
+  tibble(
+    Parameter = p,
+    Estimate  = mean(vals),
+    MCSE      = mcse_val,
+    Std_Dev   = sd(vals),
+    HPDI_2.5  = hpd$CI_low,
+    HPDI_97.5 = hpd$CI_high,
+    ESS       = ess_val,
+    Rhat      = rhat(vals)
+  )
+}) %>% bind_rows()
+
+print(summary_phys)
+
+# Check diagnostics
+cat("\nMCSE < 6% of SD:", all((100 * summary_phys$MCSE / summary_phys$Std_Dev) < 6), "\n")
+cat("ESS > 1000:", all(summary_phys$ESS > 1000), "\n")
+cat("Rhat < 1.01:", all(summary_phys$Rhat < 1.01), "\n")
+
+# Model fit statistics
+loglik_phys <- as_draws_matrix(fit_phys$draws("log_lik"))
+loo_phys <- loo(loglik_phys)
+waic_phys <- waic(loglik_phys)
+
+
+print(waic_phys)
+print(loo_phys)
+
+
+
+# MCMC Diagnostics
+draws_array_phys <- as_draws_array(fit_phys$draws())
+params_diag <- c("beta[1]", "beta[2]", "sigma")
+
+mcmc_trace(draws_array_phys, pars = params_diag)
+mcmc_dens_overlay(draws_array_phys, pars = params_diag)
+mcmc_acf(draws_array_phys, pars = params_diag)
+
+fit_phys$cmdstan_diagnose()
+
+
+
+###########################################################################
+# MODEL 4: MENTAL QOL (reflected log)
+###########################################################################
+
+# Outcome data
+y <- log(101 - analytic$AGG_MENT)
+
+# Design matrix
+X <- model.matrix(~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+                    age + BMI + SMOKE + EDUCBAS + RACE, 
+                  data = analytic)
+
+N <- nrow(X)
+P <- ncol(X)
+
+# Priors: N(0, 2), half-Normal(0, 5)
+m <- c(mean(y), rep(0, P - 1))
+s <- c(10, 2, rep(2, P - 2))
+sigma_sd <- 5
+
+data_ment <- list(
+  N = N, P = P, X = X, y = y,
+  prior_mean = m, prior_sd = s,
+  sigma_prior_sd = sigma_sd
+)
+
+fit_ment <- mod$sample(
+  data = data_ment,
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  seed = 123
+)
+
+# Posterior summary
+fit_ment$summary(variables = c("beta[1]", "beta[2]", "sigma"))
+
+# Detailed summary table
+draws_ment <- fit_ment$draws()
+draws_mat_ment <- as_draws_matrix(draws_ment)
+params_ment <- colnames(draws_mat_ment)
+params_ment <- params_ment[!grepl("lp__|log_lik", params_ment)]
+
+summary_ment <- lapply(params_ment, function(p) {
+  vals <- as.numeric(draws_mat_ment[, p])
+  mcse_val <- mcmcse::mcse(vals)$se
+  ess_val <- ess_bulk(vals)
+  hpd <- hdi(vals, ci = 0.95)
+  
+  tibble(
+    Parameter = p,
+    Estimate  = mean(vals),
+    MCSE      = mcse_val,
+    Std_Dev   = sd(vals),
+    HPDI_2.5  = hpd$CI_low,
+    HPDI_97.5 = hpd$CI_high,
+    ESS       = ess_val,
+    Rhat      = rhat(vals)
+  )
+}) %>% bind_rows()
+
+print(summary_ment)
+
+# Check diagnostics
+cat("\nMCSE < 6% of SD:", all((100 * summary_ment$MCSE / summary_ment$Std_Dev) < 6), "\n")
+cat("ESS > 1000:", all(summary_ment$ESS > 1000), "\n")
+cat("Rhat < 1.01:", all(summary_ment$Rhat < 1.01), "\n")
+
+# Model fit statistics
+loglik_ment <- as_draws_matrix(fit_ment$draws("log_lik"))
+loo_ment <- loo(loglik_ment)
+waic_ment <- waic(loglik_ment)
+
+
+print(waic_ment)
+print(loo_ment)
+
+
+
+# MCMC Diagnostics
+draws_array_ment <- as_draws_array(fit_ment$draws())
+params_diag <- c("beta[1]", "beta[2]", "sigma")
+
+mcmc_trace(draws_array_ment, pars = params_diag)
+mcmc_dens_overlay(draws_array_ment, pars = params_diag)
+mcmc_acf(draws_array_ment, pars = params_diag)
+
+fit_ment$cmdstan_diagnose()
 
 
 
