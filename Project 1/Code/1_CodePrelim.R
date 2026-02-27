@@ -12,6 +12,7 @@ library(ggplot2)
 library(gridExtra)
 library(lme4)
 library(grid)
+library(mediation)
 
 hivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
 
@@ -221,7 +222,12 @@ check_distribution(analytic$AGG_MENT,     "Mental QoL (raw)",   "deeppink4")
 
 
 # From these use log_viral load, regular CD4, and log both mental/physical QoL
-
+analytic$log10_VLOAD      <- log10(analytic$VLOAD)
+analytic$log10_VLOAD_base <- log10(analytic$VLOAD_base)
+analytic$refl_log_PHYS      <- log(101 - analytic$AGG_PHYS)
+analytic$refl_log_PHYS_base <- log(101 - analytic$AGG_PHYS_base)
+analytic$refl_log_MENT      <- log(101 - analytic$AGG_MENT)
+analytic$refl_log_MENT_base <- log(101 - analytic$AGG_MENT_base)
 
 # Convert categoricals to factors in the analytic dataset
 analytic$SMOKE   <- factor(analytic$SMOKE)
@@ -269,11 +275,11 @@ analytic$RACE_bin <- factor(
 # b is WITH adherence
 
 # Viral Load (log10 transformed) 
-mod1a <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
+mod1a <- lm(log10_VLOAD ~ hard_drugs_baseline + log10_VLOAD_base +
               age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
             data = analytic)
 
-mod1b <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
+mod1b <- lm(log10_VLOAD ~ hard_drugs_baseline + log10_VLOAD_base +
               age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
             data = analytic)
 
@@ -295,11 +301,11 @@ par(mfrow = c(2, 2)); plot(mod2b, main = "CD4 - With ADH"); par(mfrow = c(1, 1))
 
 
 # Physical QoL (reflected log)
-mod3a <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
+mod3a <- lm(refl_log_PHYS ~ hard_drugs_baseline + refl_log_PHYS_base +
               age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
             data = analytic)
 
-mod3b <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
+mod3b <- lm(refl_log_PHYS ~ hard_drugs_baseline + refl_log_PHYS_base +
               age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
             data = analytic)
 
@@ -309,11 +315,11 @@ par(mfrow = c(2, 2)); plot(mod3b, main = "Physical QoL - With ADH"); par(mfrow =
 
 
 # Mental QoL (reflected log) 
-mod4a <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+mod4a <- lm(refl_log_MENT ~ hard_drugs_baseline + refl_log_MENT_base +
               age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
             data = analytic)
 
-mod4b <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+mod4b <- lm(refl_log_MENT ~ hard_drugs_baseline + refl_log_MENT_base +
               age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
             data = analytic)
 
@@ -372,8 +378,95 @@ kable(results_table,
 
 ### ADH Mediation ###
 
+# ADH_bin is binary so we use a logistic regression (glm) for the mediator model
 
+# predicting the mediator new model
+# This is the same for all 4 outcomes
+med_model <- glm(
+  ADH_bin ~ hard_drugs_baseline + age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data = analytic, family = binomial(link = "logit")
+)
 
+# Then just plug in existing b models
+set.seed(42)
+med_vload <- mediate(med_model, mod1b,
+                     treat = "hard_drugs_baseline", mediator = "ADH_bin",
+                     treat.value = "Hard Drug User", control.value = "No Hard Drugs",
+                     sims = 1000, boot = F)
+
+set.seed(42)
+med_cd4 <- mediate(med_model, mod2b,
+                   treat = "hard_drugs_baseline", mediator = "ADH_bin",
+                   treat.value = "Hard Drug User", control.value = "No Hard Drugs",
+                   sims = 1000, boot = F)
+
+set.seed(42)
+med_phys <- mediate(med_model, mod3b,
+                    treat = "hard_drugs_baseline", mediator = "ADH_bin",
+                    treat.value = "Hard Drug User", control.value = "No Hard Drugs",
+                    sims = 1000, boot = F)
+
+set.seed(42)
+med_ment <- mediate(med_model, mod4b,
+                    treat = "hard_drugs_baseline", mediator = "ADH_bin",
+                    treat.value = "Hard Drug User", control.value = "No Hard Drugs",
+                    sims = 1000, boot = F)
+
+############################################################################
+# MEDIATION RESULTS TABLE
+############################################################################
+
+extract_mediation <- function(med_obj, label) {
+  s <- summary(med_obj)
+  data.frame(
+    Outcome   = label,
+    ACME_est  = round(s$d1,        3),
+    ACME_CI   = paste0("(", round(s$d1.ci[[1]], 3), ", ", round(s$d1.ci[[2]], 3), ")"),
+    ACME_p    = ifelse(s$d1.p < 0.001, "<0.001", as.character(round(s$d1.p, 3))),
+    ADE_est   = round(s$z1,        3),
+    ADE_CI    = paste0("(", round(s$z1.ci[[1]], 3), ", ", round(s$z1.ci[[2]], 3), ")"),
+    ADE_p     = ifelse(s$z1.p < 0.001, "<0.001", as.character(round(s$z1.p, 3))),
+    Total_est = round(s$tau.coef,  3),
+    Total_CI  = paste0("(", round(s$tau.ci[[1]], 3), ", ", round(s$tau.ci[[2]], 3), ")"),
+    Total_p   = ifelse(s$tau.p < 0.001, "<0.001", as.character(round(s$tau.p, 3))),
+    Prop_Med  = round(s$n1,        3)
+  )
+}
+
+med_table <- rbind(
+  extract_mediation(med_vload, "Viral Load (log10)"),
+  extract_mediation(med_cd4,   "CD4 Count"),
+  extract_mediation(med_phys,  "Physical QoL (refl log)"),
+  extract_mediation(med_ment,  "Mental QoL (refl log)")
+)
+
+kable(med_table,
+      row.names = FALSE,
+      caption   = "Mediation Analysis: Effect of Baseline Hard Drug Use on Year 2 Outcomes Mediated Through Medication Adherence",
+      booktabs  = TRUE,
+      col.names = c("Outcome",
+                    "Estimate", "95% CI", "p",
+                    "Estimate", "95% CI", "p",
+                    "Estimate", "95% CI", "p",
+                    "Prop. Mediated")) %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"),
+                full_width = FALSE) %>%
+  add_header_above(c(" "               = 1,
+                     "Indirect (ACME)" = 3,
+                     "Direct (ADE)"    = 3,
+                     "Total Effect"    = 3,
+                     " "               = 1)) %>%
+  footnote(general = paste(
+    "ACME = Average Causal Mediation Effect (indirect path through adherence).",
+    "ADE = Average Direct Effect (path not through adherence).",
+    "Prop. Mediated = ACME / Total Effect.",
+    "CIs based on quasi-Bayesian approximation with 1000 simulations.",
+    "Quasi-Bayesian method used due to sparse cell counts in bootstrapped resamples.",
+    "For reflected log QoL outcomes, positive estimates indicate worse quality of life.",
+    "Hard drug users vs. non-users at baseline."
+  ),
+  general_title     = "Note: ",
+  footnote_as_chunk = TRUE)
 
 # Estimates for log-transformed outcomes represent differences on the log scale. 
 # For viral load, exp(estimate) gives the fold-change in copies/mL.", 
