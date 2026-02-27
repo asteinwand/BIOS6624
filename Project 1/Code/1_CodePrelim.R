@@ -13,7 +13,7 @@ library(gridExtra)
 library(lme4)
 library(grid)
 
-hivdat <gridhivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
+hivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv")
 
 
 #####################################################################
@@ -230,6 +230,37 @@ analytic$RACE    <- factor(analytic$RACE)
 analytic$ADH     <- factor(analytic$ADH)
 
 
+############################################################################
+# Collapse groups here
+############################################################################
+
+# ADH codes: 1=100%, 2=95-99%, 3=75-94%, 4=<75%
+# >95% adherent = codes 1 and 2; <=95% = codes 3 and 4
+analytic$ADH_bin <- factor(
+  ifelse(as.numeric(as.character(analytic$ADH)) %in% c(1, 2), ">95%", "<=95%"),
+  levels = c(">95%", "<=95%")   # >95% is reference (better adherence)
+)
+
+# SMOKE codes: 1=Never, 2=Former, 3=Current
+# "Not current" includes never (1) and former (2)
+analytic$SMOKE_bin <- factor(
+  ifelse(as.numeric(as.character(analytic$SMOKE)) == 3, "Current", "Not Current"),
+  levels = c("Not Current", "Current")   # Not current is reference
+)
+
+# EDUCBAS codes: 1-4 = less than 4yr degree; 5=4yr degree, 6=some grad, 7=postgrad
+analytic$EDUC_bin <- factor(
+  ifelse(as.numeric(as.character(analytic$EDUCBAS)) >= 5,
+         ">=4 Yr College", "<4 Yr College"),
+  levels = c("<4 Yr College", ">=4 Yr College")   # <4yr is reference
+)
+
+# RACE codes: 1=White non-Hispanic; 2-8=all others
+analytic$RACE_bin <- factor(
+  ifelse(as.numeric(as.character(analytic$RACE)) == 1,
+         "Non-Hispanic White", "Other"),
+  levels = c("Non-Hispanic White", "Other")   # NHW is reference
+)
 
 
 # Frequentist models
@@ -239,44 +270,55 @@ analytic$ADH     <- factor(analytic$ADH)
 
 # Viral Load (log10 transformed) 
 mod1a <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
-mod1b <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
-              age + BMI + SMOKE + EDUCBAS + RACE + ADH,
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
             data = analytic)
-summary(mod1)
-par(mfrow = c(2, 2)); plot(mod1); par(mfrow = c(1, 1))
+
+mod1b <- lm(log10(VLOAD) ~ hard_drugs_baseline + log10(VLOAD_base) +
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
+            data = analytic)
+
+par(mfrow = c(2, 2)); plot(mod1a, main = "Viral Load - No ADH"); par(mfrow = c(1, 1))
+par(mfrow = c(2, 2)); plot(mod1b, main = "Viral Load - With ADH"); par(mfrow = c(1, 1))
 
 #  CD4 Count (untransformed)
 mod2a <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+            data = analytic)
+
 mod2b <- lm(LEU3N ~ hard_drugs_baseline + LEU3N_base +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
-           data = analytic)
-summary(mod2)
-par(mfrow = c(2, 2)); plot(mod2); par(mfrow = c(1, 1))
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
+            data = analytic)
+
+
+par(mfrow = c(2, 2)); plot(mod2a, main = "CD4 - No ADH"); par(mfrow = c(1, 1))
+par(mfrow = c(2, 2)); plot(mod2b, main = "CD4 - With ADH"); par(mfrow = c(1, 1))
+
 
 # Physical QoL (reflected log)
 mod3a <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+            data = analytic)
+
 mod3b <- lm(log(101 - AGG_PHYS) ~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
-           data = analytic)
-summary(mod3)
-par(mfrow = c(2, 2)); plot(mod3); par(mfrow = c(1, 1))
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
+            data = analytic)
+
+
+par(mfrow = c(2, 2)); plot(mod3a, main = "Physical QoL - No ADH"); par(mfrow = c(1, 1))
+par(mfrow = c(2, 2)); plot(mod3b, main = "Physical QoL - With ADH"); par(mfrow = c(1, 1))
+
 
 # Mental QoL (reflected log) 
 mod4a <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE,
-           data = analytic)
-mod4b <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
-             age + BMI + SMOKE + EDUCBAS + RACE + ADH,
-           data = analytic)
-summary(mod4)
-par(mfrow = c(2, 2)); plot(mod4); par(mfrow = c(1, 1))
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+            data = analytic)
 
+mod4b <- lm(log(101 - AGG_MENT) ~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
+              age + BMI + SMOKE_bin + EDUC_bin + RACE_bin + ADH_bin,
+            data = analytic)
+
+par(mfrow = c(2, 2)); plot(mod4a, main = "Mental QoL - No ADH"); par(mfrow = c(1, 1))
+par(mfrow = c(2, 2)); plot(mod4b, main = "Mental QoL - With ADH"); par(mfrow = c(1, 1))
 
 # Summary of all 4 frequentist models
 
@@ -328,7 +370,9 @@ kable(results_table,
   pack_rows("Mental Quality of Life (reflected log)", 7, 8)
 
 
-### ADH DID NOT MAKE A DIFFERENCE ### REMOVED FROM FURTHER ANALYSIS
+### ADH Mediation ###
+
+
 
 
 # Estimates for log-transformed outcomes represent differences on the log scale. 
