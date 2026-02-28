@@ -20,8 +20,67 @@ This hypothesis was evaluated across four measures of treatment response at Year
 
 # Methods
 
+*Data Management*
+Data was obtained from the MACS and included annual visits from Year 0 (last pre-treatment visit) through Year 8 for HIV-positive men who initiated HAART. The analytic dataset was constructed by linking each subject's Year 0 baseline visit to their Year 2 follow-up visit, retaining baseline covariate values and Year 2 outcome measures for a single cross-sectional analysis of treatment response. Subjects who did not have both a Year 0 and Year 2 visit were excluded. Additionally, subjects missing any outcome or covariate value used in the analysis were excluded via complete case analysis, resulting in a final analytic sample of 463 subjects.
+
+BMI values recorded as negative or exceeding 250, were identified as biologically implausible and set to missing prior to analysis. Hard drug use was defined at baseline (Year 0) only, consistent with the scientific question of interest, and was treated as a time-fixed binary exposure. Several covariates were collapsed into binary categories to ensure adequate cell counts and improve interpretability. Smoking status was collapsed into current smoker versus not current smoker, combining never and former smokers into a single reference category. Education was collapsed as having obtained at least a four-year college degree versus less than a four-year degree. Race and ethnicity was collapsed into Non-Hispanic White versus all other racial and ethnic groups. Medication adherence was categorized as greater than 95% adherent, combining the 100% and 95–99% adherence categories, versus 95% or less adherent, combining the 75–94% and less than 75% categories. This 95% threshold is a standard clinical cutoff for HAART adherence.
+
+*Preliminary Data Analysis*
+Distributions of all four outcome variables were examined at Year 2 using histograms, density plots, and quantile-quantile plots to assess normality and inform transformation decisions. Plasma viral load was log10-transformed due to strong right skew, consistent with standard practice in HIV research. Physical and mental quality of life scores were reflected and log-transformed using the transformation log(101 − score) to address left skew and bounded distributions, where higher transformed values indicate worse quality of life. CD4+ T cell count was retained on its original scale after inspection suggested adequate distributional properties for linear regression. Baseline values of each outcome were similarly transformed to serve as covariates in the regression models. Descriptive statistics were computed for all analytic variables overall and stratified by baseline hard drug use status.
+
+*Analysis*
+The association between baseline hard drug use and each Year 2 outcome was estimated using multiple linear regression. Four separate models were fit, one for each outcome: log10 viral load, CD4+ T cell count, reflected log physical quality of life, and reflected log mental quality of life. In each model, the primary explanatory variable was baseline hard drug use (hard drug user versus no hard drug use, the reference group). Each model was adjusted for the following covariates selected a priori based on clinical and epidemiological knowledge: baseline value of the outcome (to account for pre-treatment differences), age, BMI, smoking status, education, and race/ethnicity. The coefficient on hard drug use in each model represented the adjusted difference in the Year 2 outcome between hard drug users and non-users, holding all other covariates constant. Statistical significance was assessed at the $\alpha$ = 0.05 level using two-sided tests. No adjustment for multiple comparisons was made across the four outcomes, as each outcome represents a distinct dimension of treatment response and the analyses were considered exploratory in nature.
+
+To evaluate whether medication adherence might explain any observed differences in treatment response between hard drug users and non-users, each model was fit twice: once without adherence as a covariate and once with adherence included. Adherence was considered a potential mediator of the relationship between hard drug use and treatment outcomes, as hard drug use may reduce adherence, which in turn could worsen virologic and immunologic response. A formal mediation analysis was subsequently conducted using the potential outcomes framework to decompose the total effect of hard drug use on each outcome into an average direct effect and an average causal mediation effect operating through adherence. The mediator model was a logistic regression predicting poor adherence ($\leq$95%) from baseline hard drug use and all covariates. A quasi-Bayesian approximation with 1,000 simulations was used to obtain confidence intervals for mediation quantities.
+
+All analyses were conducted in parallel using both frequentist and Bayesian linear regression frameworks for comparison. Bayesian models used the same outcome, predictor, and covariate structure as the frequentist models. Weakly informative priors were specified for all regression coefficients: a normal prior with mean zero and standard deviation of 2 on the log scale for viral load and quality of life outcomes, and standard deviation of 100 for CD4 count, reflecting the larger scale of that outcome. A half-normal prior with standard deviation of 5 was placed on the residual standard deviation. Each Bayesian model was fit using Hamiltonian Monte Carlo sampling via Stan, with 4 chains of 1,000 warmup and 1,000 sampling iterations each, yielding 4,000 post-warmup draws. Convergence was assessed using the Gelman-Rubin diagnostic (R-hat), with values below 1.01 indicating adequate convergence, and effective sample size, with values above 1,000 considered sufficient. Posterior summaries are reported as posterior means with 95% highest posterior density intervals. Bayesian mediation was conducted by combining posterior draws from the separately fit logistic mediator and linear outcome models to obtain full posterior distributions for the average causal mediation effect, average direct effect, total effect, and proportion mediated. Model fit was assessed using the widely applicable information criterion and leave-one-out cross-validation.
 
 
 # Results
+
+*Study Sample*
+Of the 463 subjects included in the analytic sample, 427 (92.2%) reported no hard drug use at baseline and 36 (7.8%) reported hard drug use at baseline. Baseline characteristics are presented in Table 1. The two groups were similar in age (mean 43.1 years in non-users versus 43.9 years in hard drug users) and BMI (25.3 versus 23.6). Hard drug users were more likely to be current smokers (75.0% versus 34.9%) and less likely to have obtained a four-year college degree (27.8% versus 44.7%) compared to non-users. Hard drug users were also less likely to identify as Non-Hispanic White (52.8% versus 64.9%).
+
+## Table 1
+
+*Frequentist Results*
+Results from the frequentist linear regression models are presented in Table 2. Baseline hard drug use was not significantly associated with Year 2 log10 viral load after adjusting for baseline viral load and covariates ($\beta$ = −0.059, 95% CI: −0.457 to 0.339, p = 0.770). This difference does not meet the pre-specified clinically meaningful threshold of a 0.5 log10 change in viral load.
+
+Baseline hard drug use was significantly associated with lower Year 2 CD4+ T cell count ($\beta$ = −163.880, 95% CI: −226.345 to −101.415, p < 0.001), indicating that hard drug users had approximately 164 fewer CD4+ T cells at Year 2 compared to non-users after adjustment. This difference exceeds the pre-specified clinically meaningful threshold of 50 cells.
+
+## Table 2
+
+Hard drug use at baseline was significantly associated with worse physical quality of life at Year 2 on the reflected log scale ($\beta$ = 0.054, 95% CI: 0.005 to 0.104, p = 0.032). Because the outcome is reflected, a positive coefficient indicates worse physical quality of life in hard drug users relative to non-users. Hard drug use was not significantly associated with mental quality of life ($\beta$ = −0.008, 95% CI: −0.067 to 0.051, p = 0.784).
+
+*Adherence Adjustment*
+When medication adherence was added to each model, the coefficients for hard drug use changed minimally across all four outcomes (Table 2), suggesting that adherence did not substantially confound or mediate the relationship between hard drug use and treatment response in the unadjusted models. The adherence-adjusted estimates for CD4 count ($\beta$ = −169.683, 95% CI: −232.215 to −107.151, p < 0.001) and physical quality of life ($\beta$ = 0.059, 95% CI: 0.009 to 0.108, p = 0.020) remained statistically significant and were of similar magnitude to the unadjusted estimates.
+
+*Bayesian Results*
+Bayesian linear regression results are presented in Table 3. All models demonstrated adequate convergence, with R-hat values at or below 1.001 and effective sample sizes exceeding 3,000 for all parameters. Results were highly consistent with the frequentist analyses. The posterior mean for the hard drug use coefficient for CD4 count was −164.842 (95% HPDI: −208.090 to −123.422), with a posterior probability of 1.000 that the effect was negative, providing strong evidence of a harmful effect of hard drug use on CD4 recovery. For physical quality of life, the posterior mean was 0.054 (95% HPDI: 0.007 to 0.104) with a posterior directional probability of 0.986. Viral load (posterior mean: −0.059, 95% HPDI: −0.465 to 0.312, P(direction) = 0.613) and mental quality of life (posterior mean: −0.008, 95% HPDI: −0.068 to 0.048, P(direction) = 0.605) showed no meaningful evidence of an association with baseline hard drug use. Bayesian mediation results (Table 5) were consistent with the frequentist mediation findings, with the indirect effect through adherence representing a small and uncertain proportion of the total effect across all outcomes.
+
+## Table 3
+
+*Mediation ANalysis*
+Formal mediation analysis confirmed that adherence did not meaningfully mediate the effect of hard drug use on any outcome (Table 4). For CD4 count, the average causal mediation effect through adherence was 4.194 cells/mm³ (95% CI: −2.913 to 11.652, p = 0.170), representing only −2.5% of the total effect, with the large majority of the effect operating through direct pathways. For physical quality of life, the indirect effect through adherence was −0.003 (95% CI: −0.009 to 0.002, p = 0.184), representing −5.6% of the total effect. Neither the viral load nor mental quality of life mediation effects were statistically significant.
+
+## Table 4 & 5
+
+
+# Discussion/Conclusion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Discussion
