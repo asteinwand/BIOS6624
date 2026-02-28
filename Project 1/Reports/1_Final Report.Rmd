@@ -9,3 +9,19 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+# Introduction
+Data for this analysis were obtained from the Multicenter AIDS Cohort Study (MACS), an ongoing prospective cohort study of the natural and treated histories of HIV-1 infection among homosexual and bisexual men across four major U.S. cities. The analytic dataset includes longitudinal laboratory and quality of life measures collected annually for up to eight years following initiation of highly active antiretroviral therapy (HAART), along with baseline demographic and health information. Year 0 data represent each subject's last untreated visit immediately prior to HAART initiation, with Years 1 through 8 representing on-treatment follow-up visits.
+
+The scientific hypothesis of interest is whether treatment response two years after HAART initiation differs between men who reported hard drug use at baseline and those who did not. This hypothesis is motivated by laboratory and animal evidence suggesting that hard drug use may inhibit immune function and promote HIV replication, though human evidence has been inconclusive. Understanding whether hard drug users have poorer treatment response has direct clinical implications, as it may support more aggressive treatment strategies or targeted referral to drug rehabilitation programs for this population.
+
+This hypothesis was evaluated across four measures of treatment response at Year 2: log10-transformed plasma viral load, CD4+ T cell count, and aggregate physical and mental quality of life scores. Statistically, we tested whether baseline hard drug use was independently associated with each Year 2 outcome after adjusting for potential confounders, using both frequentist linear regression and Bayesian linear regression frameworks. Additionally, we examined whether any observed differences in treatment response between hard drug users and non-users were mediated through differential medication adherence.
+
+
+# Methods
+
+
+
+# Results
+
+# Discussion
