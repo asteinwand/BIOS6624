@@ -21,6 +21,130 @@ hivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advance
 # TABLE 1
 ####################################################################
 
+# Continuous: Mean (SD)
+cont_row <- function(var, label, data) {
+  overall  <- data[[var]]
+  no_drugs <- data[[var]][data$hard_drugs_baseline == "No Hard Drugs"]
+  drugs    <- data[[var]][data$hard_drugs_baseline == "Hard Drug User"]
+  
+  data.frame(
+    Characteristic = label,
+    Overall        = paste0(round(mean(overall,  na.rm=TRUE), 1), 
+                            " (", round(sd(overall,  na.rm=TRUE), 1), ")"),
+    No_Hard_Drugs  = paste0(round(mean(no_drugs, na.rm=TRUE), 1), 
+                            " (", round(sd(no_drugs, na.rm=TRUE), 1), ")"),
+    Hard_Drug_User = paste0(round(mean(drugs,    na.rm=TRUE), 1), 
+                            " (", round(sd(drugs,    na.rm=TRUE), 1), ")")
+  )
+}
+
+# Categorical: n (%)
+cat_row <- function(var, level, label, data) {
+  overall  <- data[[var]]
+  no_drugs <- data[[var]][data$hard_drugs_baseline == "No Hard Drugs"]
+  drugs    <- data[[var]][data$hard_drugs_baseline == "Hard Drug User"]
+  
+  n_overall  <- sum(overall  == level, na.rm = TRUE)
+  n_no_drugs <- sum(no_drugs == level, na.rm = TRUE)
+  n_drugs    <- sum(drugs    == level, na.rm = TRUE)
+  
+  pct_overall  <- round(100 * n_overall  / length(overall),  1)
+  pct_no_drugs <- round(100 * n_no_drugs / length(no_drugs), 1)
+  pct_drugs    <- round(100 * n_drugs    / length(drugs),    1)
+  
+  data.frame(
+    Characteristic = label,
+    Overall        = paste0(n_overall,  " (", pct_overall,  "%)"),
+    No_Hard_Drugs  = paste0(n_no_drugs, " (", pct_no_drugs, "%)"),
+    Hard_Drug_User = paste0(n_drugs,    " (", pct_drugs,    "%)")
+  )
+}
+
+# Categorical block: header row with p-value + indented level rows
+cat_block <- function(var, levels, labels, label_header, data) {
+  # Chi-square p-value for the whole variable
+  tbl <- table(data[[var]], data$hard_drugs_baseline)
+  
+  # Header row (variable name + p-value, no counts)
+  header <- data.frame(
+    Characteristic = label_header,
+    Overall        = "",
+    No_Hard_Drugs  = "",
+    Hard_Drug_User = ""
+  )
+  
+  # One row per level, indented with spaces
+  rows <- do.call(rbind, mapply(function(lv, lb) {
+    cat_row(var, lv, paste0("  ", lb), data)
+  }, levels, labels, SIMPLIFY = FALSE))
+  
+  rbind(header, rows)
+}
+
+# Sample sizes
+n_overall  <- nrow(analytic)
+n_no_drugs <- sum(analytic$hard_drugs_baseline == "No Hard Drugs")
+n_drugs    <- sum(analytic$hard_drugs_baseline == "Hard Drug User")
+
+# Build table rows
+table1_df <- rbind(
+  
+  # Continuous variables
+  cont_row("age", "Age (years)", analytic),
+  cont_row("BMI", "BMI (kg/m²)", analytic),
+  
+  # Race/Ethnicity
+  cat_block(
+    var          = "RACE_bin",
+    levels       = c("Non-Hispanic White", "Other"),
+    labels       = c("Non-Hispanic White", "Other"),
+    label_header = "Race/Ethnicity",
+    data         = analytic
+  ),
+  
+  # Education
+  cat_block(
+    var          = "EDUC_bin",
+    levels       = c(">=4 Yr College", "<4 Yr College"),
+    labels       = c("≥4 Years College", "<4 Years College"),
+    label_header = "Education",
+    data         = analytic
+  ),
+  
+  # Smoking
+  cat_block(
+    var          = "SMOKE_bin",
+    levels       = c("Current", "Not Current"),
+    labels       = c("Current Smoker", "Not Current Smoker"),
+    label_header = "Smoking Status",
+    data         = analytic
+  )
+)
+
+# Render kable
+kable(table1_df,
+      row.names = FALSE,
+      booktabs  = TRUE,
+      caption   = paste0(
+        "Baseline Characteristics of Analytic Sample by Hard Drug Use at Baseline. ",
+        "Mean (SD) for continuous variables; n (%) for categorical variables. "
+      ),
+      col.names = c(
+        "Characteristic",
+        paste0("Overall (N=", n_overall, ")"),
+        paste0("No Hard Drugs (N=", n_no_drugs, ")"),
+        paste0("Hard Drug User (N=", n_drugs, ")")
+      ),
+      align = c("l", "c", "c", "c", "r")) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    full_width    = FALSE
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+
+
+
 # Creating graphics to visualize them
 
 # Viral load
@@ -691,6 +815,71 @@ summ_ment <- summarize_bayes_model(result_ment, "Mental QoL (refl log)")
 print(result_ment$loo)
 print(result_ment$waic)
 result_ment$fit$cmdstan_diagnose()
+
+############################################################################
+# BAYESIAN RESULTS TABLE: With and Without ADH, all 4 outcomes
+# Matches structure of frequentist results table
+# Requires: result_vload, result_cd4, result_phys, result_ment (no ADH)
+#           result_vload_b, result_cd4_b, result_phys_b, result_ment_b (with ADH)
+############################################################################
+
+extract_bayes_results <- function(result_list, outcome_label) {
+  draws_mat <- as_draws_matrix(result_list$fit$draws())
+  
+  # beta[2] is always hard_drugs_baseline in our design matrix
+  drug_coef <- as.numeric(draws_mat[, "beta[2]"])
+  hpd       <- hdi(drug_coef, ci = 0.95)
+  
+  # Posterior probability of direction (prob effect is in the direction of estimate)
+  est <- mean(drug_coef)
+  p_dir <- ifelse(est > 0, mean(drug_coef > 0), mean(drug_coef < 0))
+  
+  data.frame(
+    Outcome   = outcome_label,
+    Estimate  = round(est, 3),
+    Std_Dev   = round(sd(drug_coef), 3),
+    HPDI      = paste0("(", round(hpd$CI_low, 3), ", ", round(hpd$CI_high, 3), ")"),
+    P_dir     = round(p_dir, 3),
+    ESS       = round(ess_bulk(drug_coef), 0),
+    Rhat      = round(rhat(drug_coef), 3)
+  )
+}
+
+bayes_results_table <- rbind(
+  # No ADH models
+  extract_bayes_results(result_vload, "Viral Load (log10) - No ADH"),
+  extract_bayes_results(result_vload_b, "Viral Load (log10) - With ADH"),
+  extract_bayes_results(result_cd4,   "CD4 Count - No ADH"),
+  extract_bayes_results(result_cd4_b, "CD4 Count - With ADH"),
+  extract_bayes_results(result_phys,  "Physical QoL (refl log) - No ADH"),
+  extract_bayes_results(result_phys_b,"Physical QoL (refl log) - With ADH"),
+  extract_bayes_results(result_ment,  "Mental QoL (refl log) - No ADH"),
+  extract_bayes_results(result_ment_b,"Mental QoL (refl log) - With ADH")
+)
+
+kable(bayes_results_table,
+      row.names = FALSE,
+      caption   = "Bayesian Results: Effect of Baseline Hard Drug Use on Year 2 Outcomes, With and Without Adherence Adjustment",
+      booktabs  = TRUE,
+      col.names = c("Outcome", "Estimate", "Posterior SD", "95% HPDI", 
+                    "P(Direction)", "ESS", "Rhat")) %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"),
+                full_width = FALSE) %>%
+  pack_rows("Viral Load (log10)",                  1, 2) %>%
+  pack_rows("CD4 Count",                           3, 4) %>%
+  pack_rows("Physical QoL (reflected log)",        5, 6) %>%
+  pack_rows("Mental QoL (reflected log)",          7, 8) %>%
+  footnote(general = paste(
+    "Estimate = posterior mean. Posterior SD = posterior standard deviation.",
+    "HPDI = 95% Highest Posterior Density Interval.",
+    "P(Direction) = posterior probability that the effect is in the direction of the estimate.",
+    "ESS = Effective Sample Size; values > 1000 indicate adequate sampling.",
+    "Rhat < 1.01 indicates chain convergence.",
+    "For reflected log QoL outcomes, positive estimates indicate worse quality of life.",
+    "Hard drug users vs. non-users at baseline."
+  ),
+  general_title = "Note: ",
+  footnote_as_chunk = TRUE)
 
 
 ############################################################################
