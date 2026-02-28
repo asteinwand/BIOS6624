@@ -476,514 +476,564 @@ kable(med_table,
 # Bayesian Analysis
 # Used Gleason Worksheet as a template
 
-# Dependencies 
+############################################################################
+# BAYESIAN ANALYSIS
+# Dependencies
+############################################################################
+
 library(cmdstanr)
-library(bayesplot)  # diagnostic plots of the MCMC chains
-library(posterior)  # for summarizing posterior draws
-library(bayestestR) # for calculating highest density posterior intervals
-library(mcmcse)     # for calculating MCMCSE's
-library(loo)        # for getting model fit statistics (WAIC and LOO-IC)
+library(bayesplot)
+library(posterior)
+library(bayestestR)
+library(mcmcse)
+library(loo)
 library(dplyr)
 library(tibble)
 
-###########################################################################
-# STEP 1: Define the Stan model
-# This is a general linear regression with half-normal prior on sigma
-# and normal priors on regression coefficients
-###########################################################################
 
-stan_file <- write_stan_file("data {
-  int<lower=0> N;                  // number of observations
-  int<lower=0> P;                  // number of predictors including intercept
-  matrix[N, P] X;                  // design matrix (first column = intercept)
-  vector[N] y;                     // outcome
+############################################################################
+# STEP 1: Define and compile the Stan model
+############################################################################
 
-  vector[P] prior_mean;            // prior means for each beta
-  vector<lower=0>[P] prior_sd;     // prior SDs for each beta
-
-  real<lower=0> sigma_prior_sd;    // SD for half-normal prior on sigma
+stan_file <- write_stan_file("
+data {
+  int<lower=0> N;
+  int<lower=0> P;
+  matrix[N, P] X;
+  vector[N] y;
+  vector[P] prior_mean;
+  vector<lower=0>[P] prior_sd;
+  real<lower=0> sigma_prior_sd;
 }
-
 parameters {
-  vector[P] beta;                  // regression coefficients
-  real<lower=0> sigma;             // residual SD
+  vector[P] beta;
+  real<lower=0> sigma;
 }
-
 model {
-  // Vectorized priors for regression coefficients
   beta ~ normal(prior_mean, prior_sd);
-
-  // Half-normal prior for sigma
   sigma ~ normal(0, sigma_prior_sd);
-
-  // Likelihood
   y ~ normal(X * beta, sigma);
 }
-
 generated quantities {
-  // log likelihood for each observation for calculating model fit stats
   vector[N] log_lik;
   for (n in 1:N) {
     log_lik[n] = normal_lpdf(y[n] | X[n] * beta, sigma);
   }
-}", dir="STAN", basename='linear_regression_half_normal')
+}",
+dir = "STAN", basename = "linear_regression_half_normal")
+
+stan_mod <- cmdstan_model("STAN/linear_regression_half_normal.stan")
 
 
+############################################################################
+# STEP 2: Helper functions
+############################################################################
 
-###########################################################################
-# STEP 2: Compile the Stan program
-###########################################################################
+# run_bayes_model()
+# Builds design matrix, sets priors, fits Stan model, returns fit + LOO/WAIC
+#
+# Arguments:
+#   y          : numeric outcome vector
+#   formula    : one-sided formula for model.matrix (e.g. ~ x1 + x2)
+#   data       : analytic dataframe
+#   coef_sd    : prior SD for all non-intercept coefficients
+#   sigma_sd   : SD for half-normal prior on sigma
+#   seed       : random seed
+#   chains/iter_warmup/iter_sampling : Stan sampling settings
 
-mod <- cmdstan_model('STAN/linear_regression_half_normal.stan')
-
-###########################################################################
-# MODEL 1: VIRAL LOAD (log10)
-###########################################################################
-
-# Outcome data
-y <- log10(analytic$VLOAD)
-
-# Design matrix
-X <- model.matrix(~ hard_drugs_baseline + log10(VLOAD_base) +
-                    age + BMI + SMOKE + EDUCBAS + RACE, 
-                  data = analytic)
-
-N <- nrow(X)
-P <- ncol(X)
-
-# Priors: N(0, 2) for coefficients, half-Normal(0, 5) for sigma
-m <- c(mean(y), rep(0, P - 1))  # intercept gets outcome mean, rest get 0
-s <- c(10, 2, rep(2, P - 2))    # intercept gets 10, rest get 2
-sigma_sd <- 5
-
-# Data list for Stan
-data_vload <- list(
-  N = N,
-  P = P,
-  X = X,
-  y = y,
-  prior_mean = m,
-  prior_sd = s,
-  sigma_prior_sd = sigma_sd
-)
-
-# Fit model: 4 chains, 1000 warmup + 1000 sampling = 4000 post-warmup draws
-fit_vload <- mod$sample(
-  data = data_vload,
-  chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
-
-# Posterior summary
-fit_vload$summary(variables = c("beta[1]", "beta[2]", "sigma"))
-
-# Detailed summary table
-draws_vload <- fit_vload$draws()
-draws_mat_vload <- as_draws_matrix(draws_vload)
-params_vload <- colnames(draws_mat_vload)
-params_vload <- params_vload[!grepl("lp__|log_lik", params_vload)]
-
-summary_vload <- lapply(params_vload, function(p) {
-  vals <- as.numeric(draws_mat_vload[, p])
-  mcse_val <- mcmcse::mcse(vals)$se
-  ess_val <- ess_bulk(vals)
-  hpd <- hdi(vals, ci = 0.95)
+run_bayes_model <- function(y,
+                            formula,
+                            data,
+                            coef_sd       = 2,
+                            sigma_sd      = 5,
+                            seed          = 123,
+                            chains        = 4,
+                            iter_warmup   = 1000,
+                            iter_sampling = 1000) {
   
-  tibble(
-    Parameter = p,
-    Estimate  = mean(vals),
-    MCSE      = mcse_val,
-    Std_Dev   = sd(vals),
-    HPDI_2.5  = hpd$CI_low,
-    HPDI_97.5 = hpd$CI_high,
-    ESS       = ess_val,
-    Rhat      = rhat(vals)
+  X <- model.matrix(formula, data = data)
+  N <- nrow(X)
+  P <- ncol(X)
+  
+  # Intercept gets outcome mean and wider SD; all others get 0 and coef_sd
+  prior_mean <- c(mean(y), rep(0,       P - 1))
+  prior_sd   <- c(10,      rep(coef_sd, P - 1))
+  
+  data_list <- list(
+    N             = N,
+    P             = P,
+    X             = X,
+    y             = y,
+    prior_mean    = prior_mean,
+    prior_sd      = prior_sd,
+    sigma_prior_sd = sigma_sd
   )
-}) %>% bind_rows()
-
-print(summary_vload)
-
-# Check diagnostics
-cat("\nMCSE < 6% of SD:", all((100 * summary_vload$MCSE / summary_vload$Std_Dev) < 6), "\n")
-cat("ESS > 1000:", all(summary_vload$ESS > 1000), "\n")
-cat("Rhat < 1.01:", all(summary_vload$Rhat < 1.01), "\n")
-
-# Model fit statistics
-loglik_vload <- as_draws_matrix(fit_vload$draws("log_lik"))
-loo_vload <- loo(loglik_vload)
-waic_vload <- waic(loglik_vload)
-
-
-print(waic_vload)
-print(loo_vload)
-
-
-
-# MCMC Diagnostics
-draws_array_vload <- as_draws_array(fit_vload$draws())
-params_diag <- c("beta[1]", "beta[2]", "sigma")
-
-mcmc_trace(draws_array_vload, pars = params_diag)
-mcmc_dens_overlay(draws_array_vload, pars = params_diag)
-mcmc_acf(draws_array_vload, pars = params_diag)
-
-fit_vload$cmdstan_diagnose()
-
-
-
-###########################################################################
-# MODEL 2: CD4 COUNT
-###########################################################################
-
-# Outcome data
-y <- analytic$LEU3N
-
-# Design matrix
-X <- model.matrix(~ hard_drugs_baseline + LEU3N_base +
-                    age + BMI + SMOKE + EDUCBAS + RACE, 
-                  data = analytic)
-
-N <- nrow(X)
-P <- ncol(X)
-
-# Priors: N(0, 100) for coefficients, half-Normal(0, 5) for sigma
-m <- c(mean(y), rep(0, P - 1))
-s <- c(200, 100, rep(100, P - 2))  # intercept gets 200, rest get 100
-sigma_sd <- 5
-
-data_cd4 <- list(
-  N = N, P = P, X = X, y = y,
-  prior_mean = m, prior_sd = s,
-  sigma_prior_sd = sigma_sd
-)
-
-fit_cd4 <- mod$sample(
-  data = data_cd4,
-  chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
-
-# Posterior summary
-fit_cd4$summary(variables = c("beta[1]", "beta[2]", "sigma"))
-
-# Detailed summary table
-draws_cd4 <- fit_cd4$draws()
-draws_mat_cd4 <- as_draws_matrix(draws_cd4)
-params_cd4 <- colnames(draws_mat_cd4)
-params_cd4 <- params_cd4[!grepl("lp__|log_lik", params_cd4)]
-
-summary_cd4 <- lapply(params_cd4, function(p) {
-  vals <- as.numeric(draws_mat_cd4[, p])
-  mcse_val <- mcmcse::mcse(vals)$se
-  ess_val <- ess_bulk(vals)
-  hpd <- hdi(vals, ci = 0.95)
   
-  tibble(
-    Parameter = p,
-    Estimate  = mean(vals),
-    MCSE      = mcse_val,
-    Std_Dev   = sd(vals),
-    HPDI_2.5  = hpd$CI_low,
-    HPDI_97.5 = hpd$CI_high,
-    ESS       = ess_val,
-    Rhat      = rhat(vals)
+  fit <- stan_mod$sample(
+    data          = data_list,
+    chains        = chains,
+    iter_warmup   = iter_warmup,
+    iter_sampling = iter_sampling,
+    seed          = seed,
+    refresh       = 500
   )
-}) %>% bind_rows()
-
-print(summary_cd4)
-
-# Check diagnostics
-cat("\nMCSE < 6% of SD:", all((100 * summary_cd4$MCSE / summary_cd4$Std_Dev) < 6), "\n")
-cat("ESS > 1000:", all(summary_cd4$ESS > 1000), "\n")
-cat("Rhat < 1.01:", all(summary_cd4$Rhat < 1.01), "\n")
-
-# Model fit statistics
-loglik_cd4 <- as_draws_matrix(fit_cd4$draws("log_lik"))
-loo_cd4 <- loo(loglik_cd4)
-waic_cd4 <- waic(loglik_cd4)
-
-
-print(waic_cd4)
-print(loo_cd4)
-
-
-
-# MCMC Diagnostics
-draws_array_cd4 <- as_draws_array(fit_cd4$draws())
-params_diag <- c("beta[1]", "beta[2]", "sigma")
-
-mcmc_trace(draws_array_cd4, pars = params_diag)
-mcmc_dens_overlay(draws_array_cd4, pars = params_diag)
-mcmc_acf(draws_array_cd4, pars = params_diag)
-
-fit_cd4$cmdstan_diagnose()
-
-
-
-###########################################################################
-# MODEL 3: PHYSICAL QOL (reflected log)
-###########################################################################
-
-# Outcome data
-y <- log(101 - analytic$AGG_PHYS)
-
-# Design matrix
-X <- model.matrix(~ hard_drugs_baseline + log(101 - AGG_PHYS_base) +
-                    age + BMI + SMOKE + EDUCBAS + RACE, 
-                  data = analytic)
-
-N <- nrow(X)
-P <- ncol(X)
-
-# Priors: N(0, 2) for coefficients, half-Normal(0, 5) for sigma
-m <- c(mean(y), rep(0, P - 1))
-s <- c(10, 2, rep(2, P - 2))
-sigma_sd <- 5
-
-data_phys <- list(
-  N = N, P = P, X = X, y = y,
-  prior_mean = m, prior_sd = s,
-  sigma_prior_sd = sigma_sd
-)
-
-fit_phys <- mod$sample(
-  data = data_phys,
-  chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
-
-# Posterior summary
-fit_phys$summary(variables = c("beta[1]", "beta[2]", "sigma"))
-
-# Detailed summary table
-draws_phys <- fit_phys$draws()
-draws_mat_phys <- as_draws_matrix(draws_phys)
-params_phys <- colnames(draws_mat_phys)
-params_phys <- params_phys[!grepl("lp__|log_lik", params_phys)]
-
-summary_phys <- lapply(params_phys, function(p) {
-  vals <- as.numeric(draws_mat_phys[, p])
-  mcse_val <- mcmcse::mcse(vals)$se
-  ess_val <- ess_bulk(vals)
-  hpd <- hdi(vals, ci = 0.95)
   
-  tibble(
-    Parameter = p,
-    Estimate  = mean(vals),
-    MCSE      = mcse_val,
-    Std_Dev   = sd(vals),
-    HPDI_2.5  = hpd$CI_low,
-    HPDI_97.5 = hpd$CI_high,
-    ESS       = ess_val,
-    Rhat      = rhat(vals)
+  # LOO and WAIC
+  loglik   <- as_draws_matrix(fit$draws("log_lik"))
+  loo_out  <- loo(loglik)
+  waic_out <- waic(loglik)
+  
+  list(fit = fit, loo = loo_out, waic = waic_out, X = X, y = y)
+}
+
+
+# --- summarize_bayes_model() ---
+# Returns a tibble with posterior mean, MCSE, SD, 95% HPDI, ESS, Rhat
+# for all parameters, and prints convergence diagnostics
+
+summarize_bayes_model <- function(model_list, label = "") {
+  
+  fit         <- model_list$fit
+  draws_mat   <- as_draws_matrix(fit$draws())
+  params      <- colnames(draws_mat)
+  params      <- params[!grepl("lp__|log_lik", params)]
+  
+  summary_tbl <- lapply(params, function(p) {
+    vals     <- as.numeric(draws_mat[, p])
+    hpd      <- hdi(vals, ci = 0.95)
+    tibble(
+      Parameter = p,
+      Estimate  = mean(vals),
+      MCSE      = mcmcse::mcse(vals)$se,
+      Std_Dev   = sd(vals),
+      HPDI_low  = hpd$CI_low,
+      HPDI_high = hpd$CI_high,
+      ESS       = ess_bulk(vals),
+      Rhat      = rhat(vals)
+    )
+  }) %>% bind_rows()
+  
+  if (nchar(label) > 0)
+    cat("\n===", label, "===\n")
+  
+  cat("MCSE < 6% of SD: ", all((100 * summary_tbl$MCSE / summary_tbl$Std_Dev) < 6), "\n")
+  cat("ESS > 1000:      ", all(summary_tbl$ESS > 1000), "\n")
+  cat("Rhat < 1.01:     ", all(summary_tbl$Rhat < 1.01), "\n")
+  
+  print(summary_tbl)
+  invisible(summary_tbl)
+}
+
+
+############################################################################
+# STEP 3: Fit the 4 Bayesian models
+############################################################################
+
+# Viral Load (log10)
+# coef_sd = 2 per analysis plan
+result_vload <- run_bayes_model(
+  y       = analytic$log10_VLOAD,
+  formula = ~ hard_drugs_baseline + log10_VLOAD_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 2,
+  sigma_sd = 5
+)
+summ_vload <- summarize_bayes_model(result_vload, "Viral Load (log10)")
+print(result_vload$loo)
+print(result_vload$waic)
+result_vload$fit$cmdstan_diagnose()
+
+
+# CD4 Count
+# coef_sd = 100 per analysis plan
+result_cd4 <- run_bayes_model(
+  y       = analytic$LEU3N,
+  formula = ~ hard_drugs_baseline + LEU3N_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 100,
+  sigma_sd = 5
+)
+summ_cd4 <- summarize_bayes_model(result_cd4, "CD4 Count")
+print(result_cd4$loo)
+print(result_cd4$waic)
+result_cd4$fit$cmdstan_diagnose()
+
+
+# Physical QoL (reflected log) 
+# coef_sd = 2 per analysis plan
+result_phys <- run_bayes_model(
+  y       = analytic$refl_log_PHYS,
+  formula = ~ hard_drugs_baseline + refl_log_PHYS_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 2,
+  sigma_sd = 5
+)
+summ_phys <- summarize_bayes_model(result_phys, "Physical QoL (refl log)")
+print(result_phys$loo)
+print(result_phys$waic)
+result_phys$fit$cmdstan_diagnose()
+
+
+# Mental QoL (reflected log) 
+# coef_sd = 2 per analysis plan
+result_ment <- run_bayes_model(
+  y       = analytic$refl_log_MENT,
+  formula = ~ hard_drugs_baseline + refl_log_MENT_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 2,
+  sigma_sd = 5
+)
+summ_ment <- summarize_bayes_model(result_ment, "Mental QoL (refl log)")
+print(result_ment$loo)
+print(result_ment$waic)
+result_ment$fit$cmdstan_diagnose()
+
+
+############################################################################
+# STEP 4: Bayesian Mediation Analysis
+#
+# Approach: fit mediator model (logistic) and outcome model (linear, with
+# ADH_bin included) separately in Stan, then combine posterior draws to
+# compute mediation quantities manually.
+#
+# For each posterior draw s:
+#   - From mediator model: get P(ADH=1 | drug=1) and P(ADH=1 | drug=0)
+#   - From outcome model:  get coefficients for drug and ADH
+#   - ACME(s)  = beta_ADH * (P(ADH=1|drug=1) - P(ADH=1|drug=0))
+#   - ADE(s)   = beta_drug (direct effect)
+#   - Total(s) = ADE(s) + ACME(s)
+#   - Prop(s)  = ACME(s) / Total(s)
+#
+# This gives full posterior distributions for all mediation quantities.
+############################################################################
+
+# Stan model for logistic regression (mediator model)
+stan_logistic_file <- write_stan_file("
+data {
+  int<lower=0> N;
+  int<lower=0> P;
+  matrix[N, P] X;
+  array[N] int<lower=0, upper=1> y;
+  vector[P] prior_mean;
+  vector<lower=0>[P] prior_sd;
+}
+parameters {
+  vector[P] beta;
+}
+model {
+  beta ~ normal(prior_mean, prior_sd);
+  y ~ bernoulli_logit(X * beta);
+}
+generated quantities {
+  vector[N] log_lik;
+  for (n in 1:N) {
+    log_lik[n] = bernoulli_logit_lpmf(y[n] | X[n] * beta);
+  }
+}",
+dir = "STAN", basename = "logistic_regression")
+
+stan_logistic_mod <- cmdstan_model("STAN/logistic_regression.stan")
+
+
+# --- Helper: fit logistic mediator model ---
+run_bayes_logistic <- function(y_binary, formula, data,
+                               coef_sd = 2, seed = 123,
+                               chains = 4,
+                               iter_warmup = 1000,
+                               iter_sampling = 1000) {
+  X <- model.matrix(formula, data = data)
+  N <- nrow(X)
+  P <- ncol(X)
+  
+  data_list <- list(
+    N          = N,
+    P          = P,
+    X          = X,
+    y          = as.integer(y_binary),
+    prior_mean = rep(0, P),
+    prior_sd   = c(10, rep(coef_sd, P - 1))
   )
-}) %>% bind_rows()
-
-print(summary_phys)
-
-# Check diagnostics
-cat("\nMCSE < 6% of SD:", all((100 * summary_phys$MCSE / summary_phys$Std_Dev) < 6), "\n")
-cat("ESS > 1000:", all(summary_phys$ESS > 1000), "\n")
-cat("Rhat < 1.01:", all(summary_phys$Rhat < 1.01), "\n")
-
-# Model fit statistics
-loglik_phys <- as_draws_matrix(fit_phys$draws("log_lik"))
-loo_phys <- loo(loglik_phys)
-waic_phys <- waic(loglik_phys)
-
-
-print(waic_phys)
-print(loo_phys)
-
-
-
-# MCMC Diagnostics
-draws_array_phys <- as_draws_array(fit_phys$draws())
-params_diag <- c("beta[1]", "beta[2]", "sigma")
-
-mcmc_trace(draws_array_phys, pars = params_diag)
-mcmc_dens_overlay(draws_array_phys, pars = params_diag)
-mcmc_acf(draws_array_phys, pars = params_diag)
-
-fit_phys$cmdstan_diagnose()
-
-
-
-###########################################################################
-# MODEL 4: MENTAL QOL (reflected log)
-###########################################################################
-
-# Outcome data
-y <- log(101 - analytic$AGG_MENT)
-
-# Design matrix
-X <- model.matrix(~ hard_drugs_baseline + log(101 - AGG_MENT_base) +
-                    age + BMI + SMOKE + EDUCBAS + RACE, 
-                  data = analytic)
-
-N <- nrow(X)
-P <- ncol(X)
-
-# Priors: N(0, 2), half-Normal(0, 5)
-m <- c(mean(y), rep(0, P - 1))
-s <- c(10, 2, rep(2, P - 2))
-sigma_sd <- 5
-
-data_ment <- list(
-  N = N, P = P, X = X, y = y,
-  prior_mean = m, prior_sd = s,
-  sigma_prior_sd = sigma_sd
-)
-
-fit_ment <- mod$sample(
-  data = data_ment,
-  chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
-
-# Posterior summary
-fit_ment$summary(variables = c("beta[1]", "beta[2]", "sigma"))
-
-# Detailed summary table
-draws_ment <- fit_ment$draws()
-draws_mat_ment <- as_draws_matrix(draws_ment)
-params_ment <- colnames(draws_mat_ment)
-params_ment <- params_ment[!grepl("lp__|log_lik", params_ment)]
-
-summary_ment <- lapply(params_ment, function(p) {
-  vals <- as.numeric(draws_mat_ment[, p])
-  mcse_val <- mcmcse::mcse(vals)$se
-  ess_val <- ess_bulk(vals)
-  hpd <- hdi(vals, ci = 0.95)
   
-  tibble(
-    Parameter = p,
-    Estimate  = mean(vals),
-    MCSE      = mcse_val,
-    Std_Dev   = sd(vals),
-    HPDI_2.5  = hpd$CI_low,
-    HPDI_97.5 = hpd$CI_high,
-    ESS       = ess_val,
-    Rhat      = rhat(vals)
+  fit <- stan_logistic_mod$sample(
+    data          = data_list,
+    chains        = chains,
+    iter_warmup   = iter_warmup,
+    iter_sampling = iter_sampling,
+    seed          = seed,
+    refresh       = 500
   )
-}) %>% bind_rows()
-
-print(summary_ment)
-
-# Check diagnostics
-cat("\nMCSE < 6% of SD:", all((100 * summary_ment$MCSE / summary_ment$Std_Dev) < 6), "\n")
-cat("ESS > 1000:", all(summary_ment$ESS > 1000), "\n")
-cat("Rhat < 1.01:", all(summary_ment$Rhat < 1.01), "\n")
-
-# Model fit statistics
-loglik_ment <- as_draws_matrix(fit_ment$draws("log_lik"))
-loo_ment <- loo(loglik_ment)
-waic_ment <- waic(loglik_ment)
-
-
-print(waic_ment)
-print(loo_ment)
-
-
-
-# MCMC Diagnostics
-draws_array_ment <- as_draws_array(fit_ment$draws())
-params_diag <- c("beta[1]", "beta[2]", "sigma")
-
-mcmc_trace(draws_array_ment, pars = params_diag)
-mcmc_dens_overlay(draws_array_ment, pars = params_diag)
-mcmc_acf(draws_array_ment, pars = params_diag)
-
-fit_ment$cmdstan_diagnose()
-
-
-
-# Looking at Trace plots
-
-# Model 1: Viral Load
-draws_vload <- as_draws_array(fit_vload$draws())
-params_trace <- c("beta[2]", "sigma")
-mcmc_trace(draws_vload, pars = params_trace)
-
-# Model 2: CD4
-draws_cd4 <- as_draws_array(fit_cd4$draws())
-mcmc_trace(draws_cd4, pars = params_trace)
-
-# Model 3: Physical QoL
-draws_phys <- as_draws_array(fit_phys$draws())
-mcmc_trace(draws_phys, pars = params_trace)
-
-# Model 4: Mental QoL
-draws_ment <- as_draws_array(fit_ment$draws())
-mcmc_trace(draws_ment, pars = params_trace)
-
-
-## Table results of bayesian
-
-# Extract hard drug coefficient (beta[2]) from each model
-extract_bayesian_results <- function(fit, model_name) {
-  draws_mat <- as_draws_matrix(fit$draws())
   
-  # beta[2] is hard_drugs_baseline (adjust index if needed)
-  drug_coef <- draws_mat[, "beta[2]"]
+  list(fit = fit, X = X)
+}
+
+
+# --- Helper: compute Bayesian mediation quantities from posterior draws ---
+# med_fit   : output of run_bayes_logistic()
+# out_fit   : output of run_bayes_model() WITH ADH_bin in formula
+# data      : analytic dataframe
+# drug_col  : name of treatment column in design matrices
+# adh_col   : name of mediator column in outcome design matrix
+
+compute_bayes_mediation <- function(med_fit, out_fit, data,
+                                    drug_col = "hard_drugs_baselineHard Drug User",
+                                    adh_col  = "ADH_bin<=95%") {
   
-  # Calculate summary statistics
-  hpd <- hdi(drug_coef, ci = 0.95)
+  # Posterior draws as matrices
+  med_draws <- as_draws_matrix(med_fit$fit$draws())
+  out_draws <- as_draws_matrix(out_fit$fit$draws())
+  
+  # Column indices for beta parameters only
+  med_beta_cols <- grep("^beta\\[", colnames(med_draws))
+  out_beta_cols <- grep("^beta\\[", colnames(out_draws))
+  
+  med_betas <- med_draws[, med_beta_cols]
+  out_betas <- out_draws[, out_beta_cols]
+  
+  # Column names from design matrices for indexing
+  med_X_names <- colnames(med_fit$X)
+  out_X_names <- colnames(out_fit$X)
+  
+  # Index of drug variable in each model
+  med_drug_idx <- which(med_X_names == drug_col)
+  out_drug_idx <- which(out_X_names == drug_col)
+  out_adh_idx  <- which(out_X_names == adh_col)
+  
+  if (length(med_drug_idx) == 0) stop("drug_col not found in mediator design matrix. Check column name.")
+  if (length(out_drug_idx) == 0) stop("drug_col not found in outcome design matrix. Check column name.")
+  if (length(out_adh_idx)  == 0) stop("adh_col not found in outcome design matrix. Check column name.")
+  
+  n_draws <- nrow(med_betas)
+  
+  ACME  <- numeric(n_draws)
+  ADE   <- numeric(n_draws)
+  Total <- numeric(n_draws)
+  Prop  <- numeric(n_draws)
+  
+  for (s in seq_len(n_draws)) {
+    # Mediator model betas for this draw
+    b_med <- as.numeric(med_betas[s, ])
+    
+    # Build covariate vectors for drug=1 and drug=0 at mean of other covariates
+    # Use mean covariate values across the sample
+    X_med <- med_fit$X
+    
+    # Average predictor values (for computing marginal probabilities)
+    x_mean <- colMeans(X_med)
+    
+    x_drug1        <- x_mean
+    x_drug1[med_drug_idx] <- 1   # drug user
+    
+    x_drug0        <- x_mean
+    x_drug0[med_drug_idx] <- 0   # non drug user
+    
+    # P(ADH = "<=95%" | drug = 1 or 0) via inverse logit
+    p_adh_drug1 <- plogis(sum(b_med * x_drug1))
+    p_adh_drug0 <- plogis(sum(b_med * x_drug0))
+    
+    # Outcome model betas for this draw
+    b_out      <- as.numeric(out_betas[s, ])
+    beta_drug  <- b_out[out_drug_idx]
+    beta_adh   <- b_out[out_adh_idx]
+    
+    # Mediation quantities
+    ACME[s]  <- beta_adh * (p_adh_drug1 - p_adh_drug0)
+    ADE[s]   <- beta_drug
+    Total[s] <- ADE[s] + ACME[s]
+    Prop[s]  <- ifelse(abs(Total[s]) > 1e-10, ACME[s] / Total[s], NA)
+  }
+  
+  list(ACME = ACME, ADE = ADE, Total = Total, Prop = Prop)
+}
+
+
+# --- Helper: summarize mediation posterior ---
+summarize_bayes_mediation <- function(med_quantities, label) {
+  
+  summarize_qty <- function(x, name) {
+    x     <- x[!is.na(x)]
+    hpd   <- hdi(x, ci = 0.95)
+    p_pos <- mean(x > 0)   # posterior probability of positive effect
+    tibble(
+      Quantity  = name,
+      Estimate  = round(mean(x), 3),
+      Std_Dev   = round(sd(x),   3),
+      HPDI_low  = round(hpd$CI_low,  3),
+      HPDI_high = round(hpd$CI_high, 3),
+      P_positive = round(p_pos, 3)
+    )
+  }
+  
+  tbl <- bind_rows(
+    summarize_qty(med_quantities$ACME,  "ACME (Indirect)"),
+    summarize_qty(med_quantities$ADE,   "ADE (Direct)"),
+    summarize_qty(med_quantities$Total, "Total Effect"),
+    summarize_qty(med_quantities$Prop,  "Prop. Mediated")
+  )
+  
+  cat("\n=== Bayesian Mediation:", label, "===\n")
+  print(tbl)
+  invisible(tbl)
+}
+
+
+############################################################################
+# Fit outcome models WITH ADH_bin for mediation (matching mod_b)
+############################################################################
+
+result_vload_b <- run_bayes_model(
+  y       = analytic$log10_VLOAD,
+  formula = ~ hard_drugs_baseline + ADH_bin + log10_VLOAD_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 2, sigma_sd = 5
+)
+
+result_cd4_b <- run_bayes_model(
+  y       = analytic$LEU3N,
+  formula = ~ hard_drugs_baseline + ADH_bin + LEU3N_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 100, sigma_sd = 5
+)
+
+result_phys_b <- run_bayes_model(
+  y       = analytic$refl_log_PHYS,
+  formula = ~ hard_drugs_baseline + ADH_bin + refl_log_PHYS_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 2, sigma_sd = 5
+)
+
+result_ment_b <- run_bayes_model(
+  y       = analytic$refl_log_MENT,
+  formula = ~ hard_drugs_baseline + ADH_bin + refl_log_MENT_base +
+    age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data    = analytic,
+  coef_sd = 2, sigma_sd = 5
+)
+
+
+############################################################################
+# Fit mediator model (same for all 4 outcomes)
+############################################################################
+
+# ADH_bin: >95% = reference, <=95% = 1
+# model P(ADH = "<=95%") — poor adherence
+med_fit_adh <- run_bayes_logistic(
+  y_binary = as.integer(analytic$ADH_bin == "<=95%"),
+  formula  = ~ hard_drugs_baseline + age + BMI + SMOKE_bin + EDUC_bin + RACE_bin,
+  data     = analytic,
+  coef_sd  = 2
+)
+
+
+############################################################################
+# Compute and summarize Bayesian mediation for all 4 outcomes
+############################################################################
+
+med_bayes_vload <- compute_bayes_mediation(
+  med_fit_adh, result_vload_b, data = analytic,
+  drug_col = "hard_drugs_baselineHard Drug User",
+  adh_col  = "ADH_bin<=95%"
+)
+summ_med_vload <- summarize_bayes_mediation(med_bayes_vload, "Viral Load (log10)")
+
+
+med_bayes_cd4 <- compute_bayes_mediation(
+  med_fit_adh, result_cd4_b, data = analytic,
+  drug_col = "hard_drugs_baselineHard Drug User",
+  adh_col  = "ADH_bin<=95%"
+)
+summ_med_cd4 <- summarize_bayes_mediation(med_bayes_cd4, "CD4 Count")
+
+
+med_bayes_phys <- compute_bayes_mediation(
+  med_fit_adh, result_phys_b, data = analytic,
+  drug_col = "hard_drugs_baselineHard Drug User",
+  adh_col  = "ADH_bin<=95%"
+)
+summ_med_phys <- summarize_bayes_mediation(med_bayes_phys, "Physical QoL (refl log)")
+
+
+med_bayes_ment <- compute_bayes_mediation(
+  med_fit_adh, result_ment_b, data = analytic,
+  drug_col = "hard_drugs_baselineHard Drug User",
+  adh_col  = "ADH_bin<=95%"
+)
+summ_med_ment <- summarize_bayes_mediation(med_bayes_ment, "Mental QoL (refl log)")
+
+
+############################################################################
+# Bayesian Mediation Summary Table (all 4 outcomes, ACME row only)
+# Full tables are in the individual 
+############################################################################
+
+build_bayes_med_row <- function(med_quantities, label) {
+  acme  <- med_quantities$ACME
+  ade   <- med_quantities$ADE
+  total <- med_quantities$Total
+  prop  <- med_quantities$Prop[!is.na(med_quantities$Prop)]
+  
+  hpd_acme  <- hdi(acme,  ci = 0.95)
+  hpd_ade   <- hdi(ade,   ci = 0.95)
+  hpd_total <- hdi(total, ci = 0.95)
   
   data.frame(
-    Model = model_name,
-    Estimate = mean(drug_coef),
-    Std_Dev = sd(drug_coef),
-    HPDI_2.5 = hpd$CI_low,
-    HPDI_97.5 = hpd$CI_high,
-    ESS = ess_bulk(drug_coef),
-    Rhat = rhat(drug_coef)
+    Outcome    = label,
+    ACME_est   = round(mean(acme),  3),
+    ACME_HPDI  = paste0("(", round(hpd_acme$CI_low,  3), ", ",
+                        round(hpd_acme$CI_high, 3), ")"),
+    ACME_Ppos  = round(mean(acme > 0), 3),
+    ADE_est    = round(mean(ade),   3),
+    ADE_HPDI   = paste0("(", round(hpd_ade$CI_low,  3), ", ",
+                        round(hpd_ade$CI_high, 3), ")"),
+    ADE_Ppos   = round(mean(ade > 0), 3),
+    Total_est  = round(mean(total), 3),
+    Total_HPDI = paste0("(", round(hpd_total$CI_low,  3), ", ",
+                        round(hpd_total$CI_high, 3), ")"),
+    Total_Ppos = round(mean(total > 0), 3),
+    Prop_Med   = round(mean(prop),  3)
   )
 }
 
-# Build table
-bayesian_results <- rbind(
-  extract_bayesian_results(fit_vload, "Viral Load (log10)"),
-  extract_bayesian_results(fit_cd4, "CD4 Count"),
-  extract_bayesian_results(fit_phys, "Physical QoL (refl log)"),
-  extract_bayesian_results(fit_ment, "Mental QoL (refl log)")
+bayes_med_table <- rbind(
+  build_bayes_med_row(med_bayes_vload, "Viral Load (log10)"),
+  build_bayes_med_row(med_bayes_cd4,   "CD4 Count"),
+  build_bayes_med_row(med_bayes_phys,  "Physical QoL (refl log)"),
+  build_bayes_med_row(med_bayes_ment,  "Mental QoL (refl log)")
 )
 
-# Round for display
-bayesian_results$Estimate <- round(bayesian_results$Estimate, 3)
-bayesian_results$Std_Dev <- round(bayesian_results$Std_Dev, 3)
-bayesian_results$HPDI_2.5 <- round(bayesian_results$HPDI_2.5, 3)
-bayesian_results$HPDI_97.5 <- round(bayesian_results$HPDI_97.5, 3)
-bayesian_results$ESS <- round(bayesian_results$ESS, 0)
-bayesian_results$Rhat <- round(bayesian_results$Rhat, 3)
-
-# Combine HPDI into one column
-bayesian_results$`95% HPDI` <- paste0("(", bayesian_results$HPDI_2.5, 
-                                      ", ", bayesian_results$HPDI_97.5, ")")
-bayesian_results$HPDI_2.5 <- NULL
-bayesian_results$HPDI_97.5 <- NULL
-
-# Create nice table
-kable(bayesian_results,
+kable(bayes_med_table,
       row.names = FALSE,
-      caption = "Bayesian Results: Effect of Baseline Hard Drug Use on Year 2 Outcomes",
-      booktabs = TRUE,
-      align = c("l", "r", "r", "r", "r", "r")) %>%
-  kable_styling(latex_options = c("striped", "hold_position"),
+      caption   = "Bayesian Mediation Analysis: Effect of Baseline Hard Drug Use on Year 2 Outcomes Mediated Through Medication Adherence",
+      booktabs  = TRUE,
+      col.names = c("Outcome",
+                    "Estimate", "95% HPDI", "P(>0)",
+                    "Estimate", "95% HPDI", "P(>0)",
+                    "Estimate", "95% HPDI", "P(>0)",
+                    "Prop. Mediated")) %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"),
                 full_width = FALSE) %>%
-  footnote(general = "HPDI = Highest Posterior Density Interval. ESS = Effective Sample Size. Rhat < 1.01 indicates convergence.",
-           general_title = "Note: ",
-           footnote_as_chunk = TRUE)
-
-print(bayesian_results)
-
+  add_header_above(c(" "               = 1,
+                     "Indirect (ACME)" = 3,
+                     "Direct (ADE)"    = 3,
+                     "Total Effect"    = 3,
+                     " "               = 1)) %>%
+  footnote(general = paste(
+    "ACME = Average Causal Mediation Effect (indirect path through adherence).",
+    "ADE = Average Direct Effect (path not through adherence).",
+    "P(>0) = posterior probability that the effect is positive.",
+    "Prop. Mediated = posterior mean of ACME / Total Effect.",
+    "Mediation quantities computed by combining posterior draws from",
+    "separate logistic (mediator) and linear (outcome) Stan models.",
+    "For reflected log QoL outcomes, positive estimates indicate worse quality of life.",
+    "Hard drug users vs. non-users at baseline."
+  ),
+  general_title     = "Note: ",
+  footnote_as_chunk = TRUE)
 
 
