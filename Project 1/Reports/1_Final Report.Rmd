@@ -5,6 +5,10 @@ date: "2026-02-28"
 output: 
   pdf_document:
     latex_engine: xelatex
+header-includes:
+  - \usepackage{lscape}
+  - \usepackage{longtable}
+  - \usepackage{booktabs}
 ---
 
 ```{r setup, include=FALSE}
@@ -806,67 +810,6 @@ med_ment <- mediate(med_model, mod4b,
 
 ```
 
-```{r table4, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
-
-############################################################################
-# MEDIATION RESULTS TABLE
-############################################################################
-
-extract_mediation <- function(med_obj, label) {
-  s <- summary(med_obj)
-  data.frame(
-    Outcome   = label,
-    ACME_est  = round(s$d1,        3),
-    ACME_CI   = paste0("(", round(s$d1.ci[[1]], 3), ", ", round(s$d1.ci[[2]], 3), ")"),
-    ACME_p    = ifelse(s$d1.p < 0.001, "<0.001", as.character(round(s$d1.p, 3))),
-    ADE_est   = round(s$z1,        3),
-    ADE_CI    = paste0("(", round(s$z1.ci[[1]], 3), ", ", round(s$z1.ci[[2]], 3), ")"),
-    ADE_p     = ifelse(s$z1.p < 0.001, "<0.001", as.character(round(s$z1.p, 3))),
-    Total_est = round(s$tau.coef,  3),
-    Total_CI  = paste0("(", round(s$tau.ci[[1]], 3), ", ", round(s$tau.ci[[2]], 3), ")"),
-    Total_p   = ifelse(s$tau.p < 0.001, "<0.001", as.character(round(s$tau.p, 3))),
-    Prop_Med  = round(s$n1,        3)
-  )
-}
-
-med_table <- rbind(
-  extract_mediation(med_vload, "Viral Load (log10)"),
-  extract_mediation(med_cd4,   "CD4 Count"),
-  extract_mediation(med_phys,  "Physical QoL (refl log)"),
-  extract_mediation(med_ment,  "Mental QoL (refl log)")
-)
-
-kable(med_table,
-      row.names = FALSE,
-      caption   = "Mediation Analysis: Effect of Baseline Hard Drug Use on Year 2 Outcomes Mediated Through Medication Adherence",
-      booktabs  = TRUE,
-      col.names = c("Outcome",
-                    "Estimate", "95% CI", "p",
-                    "Estimate", "95% CI", "p",
-                    "Estimate", "95% CI", "p",
-                    "Prop. Mediated")) %>%
-  kable_styling(latex_options = c("striped", "hold_position", "scale_down"),
-                full_width = FALSE) %>%
-  add_header_above(c(" "               = 1,
-                     "Indirect (ACME)" = 3,
-                     "Direct (ADE)"    = 3,
-                     "Total Effect"    = 3,
-                     " "               = 1)) %>%
-  footnote(general = c(
-    "ACME = Average Causal Mediation Effect (indirect path through adherence).",
-    "ADE = Average Direct Effect (path not through adherence).",
-    "Prop. Mediated = ACME / Total Effect.",
-    "CIs based on quasi-Bayesian approximation with 1000 simulations.",
-    "Quasi-Bayesian method used due to sparse cell counts in bootstrapped resamples.",
-    "For reflected log QoL outcomes, positive estimates indicate worse quality of life.",
-    "Hard drug users vs. non-users at baseline."
-  ),
-  general_title     = "Note: ",
-  footnote_as_chunk = F)
-
-
-```
-
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -1148,12 +1091,34 @@ summ_med_ment <- summarize_bayes_mediation(med_bayes_ment, "Mental QoL (refl log
 ```
 
 
-```{r table5, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+```{r table4-5, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+############################################################################
+# MEDIATION RESULTS TABLE
+############################################################################
 
-############################################################################
-# Bayesian Mediation Summary Table (all 4 outcomes, ACME row only)
-# Full tables are in the individual 
-############################################################################
+extract_mediation <- function(med_obj, label) {
+  s <- summary(med_obj)
+  data.frame(
+    Outcome   = label,
+    ACME_est  = round(s$d1,        3),
+    ACME_CI   = paste0("(", round(s$d1.ci[[1]], 3), ", ", round(s$d1.ci[[2]], 3), ")"),
+    ACME_p    = ifelse(s$d1.p < 0.001, "<0.001", as.character(round(s$d1.p, 3))),
+    ADE_est   = round(s$z1,        3),
+    ADE_CI    = paste0("(", round(s$z1.ci[[1]], 3), ", ", round(s$z1.ci[[2]], 3), ")"),
+    ADE_p     = ifelse(s$z1.p < 0.001, "<0.001", as.character(round(s$z1.p, 3))),
+    Total_est = round(s$tau.coef,  3),
+    Total_CI  = paste0("(", round(s$tau.ci[[1]], 3), ", ", round(s$tau.ci[[2]], 3), ")"),
+    Total_p   = ifelse(s$tau.p < 0.001, "<0.001", as.character(round(s$tau.p, 3))),
+    Prop_Med  = round(s$n1,        3)
+  )
+}
+
+med_table <- rbind(
+  extract_mediation(med_vload, "Viral Load (log10)"),
+  extract_mediation(med_cd4,   "CD4 Count"),
+  extract_mediation(med_phys,  "Physical QoL (refl log)"),
+  extract_mediation(med_ment,  "Mental QoL (refl log)")
+)
 
 build_bayes_med_row <- function(med_quantities, label) {
   acme  <- med_quantities$ACME
@@ -1190,17 +1155,55 @@ bayes_med_table <- rbind(
   build_bayes_med_row(med_bayes_ment,  "Mental QoL (refl log)")
 )
 
+
+# Open landscape environment manually
+cat("\\begin{landscape}\n")
+
+# Table 4 - Frequentist Mediation
+kable(med_table,
+      row.names = FALSE,
+      caption   = "Mediation Analysis: Effect of Baseline Hard Drug Use on Year 2 Outcomes Mediated Through Medication Adherence",
+      booktabs  = TRUE,
+      longtable = F,
+      col.names = c("Outcome",
+                    "Estimate", "95\\% CI", "p",
+                    "Estimate", "95\\% CI", "p",
+                    "Estimate", "95\\% CI", "p",
+                    "Prop. Mediated")) %>%
+  kable_styling(latex_options = c("striped", "scale_down"),  
+                full_width    = F) %>%    # remove hold_position in landscape
+  add_header_above(c(" "               = 1,
+                     "Indirect (ACME)" = 3,
+                     "Direct (ADE)"    = 3,
+                     "Total Effect"    = 3,
+                     " "               = 1)) %>%
+  footnote(general = c(
+    "ACME = Average Causal Mediation Effect (indirect path through adherence).",
+    "ADE = Average Direct Effect (path not through adherence).",
+    "Prop. Mediated = ACME / Total Effect.",
+    "CIs based on quasi-Bayesian approximation with 1000 simulations.",
+    "For reflected log QoL outcomes, positive estimates indicate worse quality of life."
+  ),
+  general_title     = "Note: ",
+  footnote_as_chunk = FALSE) %>%
+  print()
+
+# Add some vertical space between tables
+cat("\\vspace{1cm}\n")
+
+# Table 5 - Bayesian Mediation
 kable(bayes_med_table,
       row.names = FALSE,
       caption   = "Bayesian Mediation Analysis: Effect of Baseline Hard Drug Use on Year 2 Outcomes Mediated Through Medication Adherence",
       booktabs  = TRUE,
+      longtable = F,
       col.names = c("Outcome",
-                    "Estimate", "95% HPDI", "P(>0)",
-                    "Estimate", "95% HPDI", "P(>0)",
-                    "Estimate", "95% HPDI", "P(>0)",
+                    "Estimate", "95\\% HPDI", "P(>0)",
+                    "Estimate", "95\\% HPDI", "P(>0)",
+                    "Estimate", "95\\% HPDI", "P(>0)",
                     "Prop. Mediated")) %>%
-  kable_styling(latex_options = c("striped", "hold_position", "scale_down"),
-                full_width = FALSE) %>%
+  kable_styling(latex_options = c("striped", "scale_down"),
+                full_width    = F) %>%
   add_header_above(c(" "               = 1,
                      "Indirect (ACME)" = 3,
                      "Direct (ADE)"    = 3,
@@ -1211,16 +1214,14 @@ kable(bayes_med_table,
     "ADE = Average Direct Effect (path not through adherence).",
     "P(>0) = posterior probability that the effect is positive.",
     "Prop. Mediated = posterior mean of ACME / Total Effect.",
-    "Mediation quantities computed by combining posterior draws from",
-    "separate logistic (mediator) and linear (outcome) Stan models.",
-    "For reflected log QoL outcomes, positive estimates indicate worse quality of life.",
-    "Hard drug users vs. non-users at baseline."
+    "For reflected log QoL outcomes, positive estimates indicate worse quality of life."
   ),
   general_title     = "Note: ",
-  footnote_as_chunk = F)
+  footnote_as_chunk = FALSE) %>%
+  print()
 
-
-
+# Close landscape environment
+cat("\\end{landscape}\n")
 ```
 
 
