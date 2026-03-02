@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024) (preloaded format=xelatex 2025.2.20)  1 MAR 2026 09:18
+This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024) (preloaded format=xelatex 2025.2.20)  2 MAR 2026 08:24
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -847,7 +847,31 @@ Overfull \hbox (85.07999pt too wide) in alignment at lines 423--441
 
 [7
 
-] (./1_Final-Report.aux)
+]
+File: P1 N Tracking (1).pdf Graphic file (type pdf)
+<use P1 N Tracking (1).pdf>
+File: 1_Final-Report_files/figure-latex/trace-plots-1.pdf Graphic file (type pdf)
+<use 1_Final-Report_files/figure-latex/trace-plots-1.pdf>
+
+
+[8]
+File: 1_Final-Report_files/figure-latex/trace-plots-2.pdf Graphic file (type pdf)
+<use 1_Final-Report_files/figure-latex/trace-plots-2.pdf>
+
+
+[9]
+File: 1_Final-Report_files/figure-latex/trace-plots-3.pdf Graphic file (type pdf)
+<use 1_Final-Report_files/figure-latex/trace-plots-3.pdf>
+
+
+[10]
+File: 1_Final-Report_files/figure-latex/trace-plots-4.pdf Graphic file (type pdf)
+<use 1_Final-Report_files/figure-latex/trace-plots-4.pdf>
+
+
+[11]
+
+[12] (./1_Final-Report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -857,12 +881,12 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 18376 strings out of 475846
- 335103 string characters out of 5773211
- 894948 words of memory out of 5000000
- 41052 multiletter control sequences out of 15000+600000
+ 18437 strings out of 475846
+ 337859 string characters out of 5773211
+ 895058 words of memory out of 5000000
+ 41108 multiletter control sequences out of 15000+600000
  565362 words of font info for 86 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 90i,7n,114p,432b,369s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,7n,114p,432b,404s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on 1_Final-Report.pdf (7 pages).
+Output written on 1_Final-Report.pdf (12 pages).

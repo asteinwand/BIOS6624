@@ -1245,6 +1245,41 @@ GitHub Link: https://github.com/asteinwand/BIOS6624.git
 File Path to data: hivdat <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 1/Data Raw/hiv_6624_final.csv") 
 
 
+\newpage
+
+# Appendix
+
+## Subject Flow
+```{r subject-flow, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', out.width='80%'}
+knitr::include_graphics("P1 N Tracking (1).pdf")
+```
+
+## MCMC Trace Plots
+```{r trace-plots, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=8, fig.align='center', out.width='\\textwidth'}
+
+# 4 outcomes, showing hard drug coefficient (beta[2]) and sigma
+params_trace <- c("beta[2]", "sigma")
+
+# Viral Load
+draws_vload <- as_draws_array(result_vload$fit$draws())
+mcmc_trace(draws_vload, pars = params_trace) +
+  ggtitle("Trace Plots: Viral Load (log10)")
+
+# CD4 Count
+draws_cd4 <- as_draws_array(result_cd4$fit$draws())
+mcmc_trace(draws_cd4, pars = params_trace) +
+  ggtitle("Trace Plots: CD4 Count")
+
+# Physical QoL
+draws_phys <- as_draws_array(result_phys$fit$draws())
+mcmc_trace(draws_phys, pars = params_trace) +
+  ggtitle("Trace Plots: Physical QoL (reflected log)")
+
+# Mental QoL
+draws_ment <- as_draws_array(result_ment$fit$draws())
+mcmc_trace(draws_ment, pars = params_trace) +
+  ggtitle("Trace Plots: Mental QoL (reflected log)")
+```
 
 
 
