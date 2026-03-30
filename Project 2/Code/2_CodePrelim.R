@@ -7,6 +7,7 @@ library(ggplot2)
 library(gridExtra)
 library(lme4)
 library(grid)
+library(powertools)
 
 ### Load Data
 
@@ -113,10 +114,87 @@ boxplot(memdata$MCP_1,
 
 
 
+#### Power analysis ####
+
+#### Aim 1 ####
+
+# Tests the partial contribution of each cytokine over and
+# above covariates in predicting each outcome change score
+#
+# Parameters:
+#   N     = 175  projected analytic sample (125 aMCI + 50 HC
+#           after ~10% attrition from 192 enrolled)
+#   p     = 10   covariates (age, sex, APOE-e4, education,
+#                BMI, hypercholesterolemia, NSAID use, immune
+#                conditions, group membership, baseline score)
+#   q     = 1    one cytokine tested at a time
+#   pc    = partial correlation 
+#   alpha = 0.05 (FDR correction applied at analysis stage
+#                 via p.adjust; alpha not adjusted here)
 
 
 
+cor_matrix <- cor(memdata[, c("IL_6", "MCP_1", "CVLT_CNG3", "CORT_CNG3")],
+                  use = "complete.obs")
+round(cor_matrix, 3)
 
+sd_CVLT <- sd(memdata$CVLT_CNG3, na.rm = TRUE)
+sd_CORT <- sd(memdata$CORT_CNG3, na.rm = TRUE)
+sd_IL6  <- sd(memdata$IL_6,      na.rm = TRUE)
+sd_MCP1 <- sd(memdata$MCP_1,     na.rm = TRUE)
+
+# Key correlations 
+r_IL6_CVLT  <- abs(cor_matrix["IL_6",  "CVLT_CNG3"])
+r_IL6_CORT  <- abs(cor_matrix["IL_6",  "CORT_CNG3"])
+r_MCP1_CVLT <- abs(cor_matrix["MCP_1", "CVLT_CNG3"])
+r_MCP1_CORT <- abs(cor_matrix["MCP_1", "CORT_CNG3"])
+
+# IL-6 -> CVLT change
+mlrF.partial(N = 175, p = 10, q = 1,
+             pc = r_IL6_CVLT, alpha = 0.05, v = TRUE)
+
+# IL-6 -> cort change
+mlrF.partial(N = 175, p = 10, q = 1,
+             pc = r_IL6_CORT, alpha = 0.05, v = TRUE)
+
+# MCP-1 -> CVLT change
+mlrF.partial(N = 175, p = 10, q = 1,
+             pc = r_MCP1_CVLT, alpha = 0.05, v = TRUE)
+
+# MCP-1 -> cort change
+mlrF.partial(N = 175, p = 10, q = 1,
+             pc = r_MCP1_CORT, alpha = 0.05, v = TRUE)
+
+
+
+#### Aim 2 ####
+
+# No preliminary data available for the cytokine x amyloid
+# interaction. Instead we estimate the minimum detectable
+# partial correlation for the interaction term at 80% power.
+#
+# N     = 175
+# p     = 12   (10 covariates + cytokine main effect +
+#               amyloid SUVR main effect)
+# q     = 1    (the interaction term)
+# alpha = 0.05
+
+mlrF.partial(N = 175, p = 12, q = 1,
+             pc = NULL, alpha = 0.05, power = 0.80)
+
+
+pc_values <- seq(0.10, 0.40, by = 0.01)
+
+for (pc_val in pc_values) {
+  result <- mlrF.partial(N = 175, p = 12, q = 1,
+                         pc = pc_val, alpha = 0.05, v = FALSE)
+  if (result >= 0.80) {
+    cat("Minimum detectable partial correlation at 80% power:", pc_val, "\n")
+    mlrF.partial(N = 175, p = 12, q = 1,
+                 pc = pc_val, alpha = 0.05, v = TRUE)
+    break
+  }
+}
 
 
 
