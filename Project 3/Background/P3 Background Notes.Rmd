@@ -1,0 +1,69 @@
+---
+title: "P3 Background"
+author: "Aimee Steinwand"
+date: "2026-04-01"
+output: pdf_document
+---
+
+The Framingham Heart Study is a long term prospective study of the etiology of cardiovascular disease among a population of free living subjects in the community of Framingham, Massachusetts. The Framingham Heart Study was a landmark study in epidemiology in that it was the first prospective study of cardiovascular disease and identified the concept of risk factors and their joint effects. The study began in 1948 and 5,209 subjects were initially enrolled in the study. Participants have been examined biennially since the inception of the study and all subjects are continuously followed through regular surveillance for cardiovascular outcomes. Clinic examination data has included cardiovascular disease risk factors and markers of disease such as blood pressure, blood chemistry, lung function, smoking history, health behaviors, ECG tracings, Echocardiography, and medication use. Through regular surveillance of area hospitals, participant contact, and death certificates, the Framingham Heart Study reviews and adjudicates events for the occurrence of Angina Pectoris, Myocardial Infarction, Heart Failure, and Cerebrovascular disease.
+
+The enclosed dataset is a subset of the data collected as part of the Framingham study and includes laboratory, clinic, questionnaire, and adjudicated event data on 4,434 participants. Participant clinic data was collected during three examination periods, approximately 6 years apart, from roughly 1956 to 1968. Each participant was followed for a total of 24 years for the outcome of the following events: Angina Pectoris, Myocardial Infarction, Atherothrombotic Infarction or Cerebral Hemorrhage (Stroke) or death.
+
+The goal of the analysis is to identify important risk factors of stroke and compute the 10-year probability of stroke based on different risk profiles. The analysis should be stratified by sex (M/F). Your analysis should only be conducted using the first 10 years of follow-up. The rationale for this is that the risk factors are measured more closely in time for evaluating risk. For this analysis please use only baseline risk factors. However, I would like to know how much change there is in the risk factors over in the 3 periods of data collection. This additional information would tell me whether we might want to consider a more complex time-varying covariate analysis (not needed for this project). In your discussion, please interpret for me why the analysis and/or results may differ when using the time varying covariates for analysis.
+
+
+
+
+Questions for the Investigator:
+
+- 3 periods of data collection - secondary question to look at period 1 vs 2 vs 3. Create a table to show the difference between the periods
+- Expectation to show the difference between the 3 time periods
+
+- Main Aim is only looking at the first 10 years of follow-up
+What if we stopped at 10 years? What would it look like?
+
+- 10 years, but time in days 10 * 365.25 to get time
+
+
+
+- what specific risk factors are you interested in?
+
+- covariates or risk factors?: cardiovascular disease risk factors and markers of disease such as blood pressure, blood chemistry, lung function, smoking history, health behaviors, ECG tracings, Echocardiography, and medication use
+
+- For this analysis please use only baseline risk factors
+
+- risk factors not sure about: presence of coronary heart disease, smoking status, bp medication (correlated with bp), total HDL/LDL, BMI
+
+
+- risk factors want for sure: BP(systolic), age, diabetes
+- outcome: survival from stroke. if they previously had a stroke their value at time point 1 is 1, do not include them!!
+
+- exclusion criteria: missing values, values that look weird, previous stroke
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
