@@ -15,30 +15,44 @@ The goal of the analysis is to identify important risk factors of stroke and com
 
 
 Questions for the Investigator:
-
-- 3 periods of data collection - secondary question to look at period 1 vs 2 vs 3. Create a table to show the difference between the periods
-- Expectation to show the difference between the 3 time periods
-
 - Main Aim is only looking at the first 10 years of follow-up
 What if we stopped at 10 years? What would it look like?
-
 - 10 years, but time in days 10 * 365.25 to get time
+- 3 periods of data collection - secondary question to look at period 1 vs 2 vs 3. Create a table to show the difference between the periods
+- Expectation to show the difference between the 3 time periods
+- ensure that visits after 10 years (3652.5) are not included, and only use event time before the 10 years as well ex: $TIMESTRK
 
 
 
 - what specific risk factors are you interested in?
 
 - covariates or risk factors?: cardiovascular disease risk factors and markers of disease such as blood pressure, blood chemistry, lung function, smoking history, health behaviors, ECG tracings, Echocardiography, and medication use
-
 - For this analysis please use only baseline risk factors
-
 - risk factors not sure about: presence of coronary heart disease, smoking status, bp medication (correlated with bp), total HDL/LDL, BMI
-
-
 - risk factors want for sure: BP(systolic), age, diabetes
 - outcome: survival from stroke. if they previously had a stroke their value at time point 1 is 1, do not include them!!
 
-- exclusion criteria: missing values, values that look weird, previous stroke
+
+- could potentially have different risk factors for male vs female models
+don't care if they are the same, as long as you can explain why you did it a specific way
+Easier to compare them if they are the same, if purpose of the study is to compare them then you need to use the same ones
+one way is doing variable selection in both models and use any variable that appeared in EITHER model. Doing it in both and want to be very liberal in exploratory data set
+
+- want as much data in the final model as possible. If we exclude patients based on missing covariate and then decide to not use that covariate, we need to bring back in the people that were excluded due to missing that specific covariate
+
+- exclusion criteria: missing values, values that look weird, previous stroke ($STROKE = 1)
+
+- stepwise variable selection either forwards or backwards as long as we talk about why and how we select which variables in the model
+
+
+Calculate survival for each of the following profiles (10 year probability) male and female
+40, 50, and 60 across all these groups
+average profile without any risk factors
+high blood pressure (160)
+has DM
+HBP and DM
+one additional profile that is interesting
+
 
 
 
