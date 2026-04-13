@@ -52,6 +52,7 @@ high blood pressure (160)
 has DM
 HBP and DM
 one additional profile that is interesting
+- smoking? BMI?
 
 
 
