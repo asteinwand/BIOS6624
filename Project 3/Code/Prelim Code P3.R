@@ -1,4 +1,5 @@
 library(survminer)
+library(survival)
 library(gtsummary)
 
 
@@ -50,15 +51,41 @@ max(base$BMI, na.rm = TRUE) # 56.8 all plausible values for BMI
 
 
 
-### fit survival curves to determine what we put in the cox model
+### fit KM curves to determine what we put in the cox model
+
+surv_obj <- Surv(time = base$stroke_time, event = base$stroke_event)
+
+
+# not stratified
+km_overall <- survfit(surv_obj ~ 1, data = base)
+
+ggsurvplot(km_overall,
+           data = base,
+           xlab = "Time (days)",
+           ylab = "Stroke-free Survival Probability",
+           title = "Overall Kaplan-Meier Curve")
+
+
+# stratified by sex
+km_sex <- survfit(surv_obj ~ SEX, data = base)
+
+ggsurvplot(km_sex,
+           data = base,
+           legend.labs = c("Male", "Female"),
+           xlab = "Time (days)",
+           ylab = "Stroke-free Survival Probability",
+           title = "Kaplan-Meier by Sex")
 
 
 
+##### FILTERED DATA WRONG ####### fix it
+
+hist(fhsdata$TIMESTRK[fhsdata$PERIOD == 1 & fhsdata$STROKE == 1],
+     main = "TIMESTRK for Stroke=1 at Period 1",
+     xlab = "Days")
 
 
-
-
-
+summary(fhsdata$TIMESTRK[fhsdata$PERIOD == 1 & fhsdata$STROKE == 1])
 
 
 
