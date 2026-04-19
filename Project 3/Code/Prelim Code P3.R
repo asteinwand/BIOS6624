@@ -1,6 +1,7 @@
 library(survminer)
 library(survival)
 library(gtsummary)
+library(MASS)
 
 
 
@@ -141,11 +142,98 @@ ggsurvplot(km_heartrte, data = base,
            title = "KM Curve by Heart Rate")
 
 
+
+
+### Start survival models ####
+
 ### complete case analysis to add back in dropped variables
 
-base_final <- base[complete.cases(base[, c("SYSBP", "AGE", "DIABETES", "BPMEDS")]), ]
+base_final <- base[complete.cases(base[, c("SYSBP", "AGE", 
+                                           "DIABETES", "BPMEDS")]), ]
 nrow(base_final)
 
-sapply(base[, c("SYSBP", "AGE", "DIABETES", "BPMEDS")], function(x) sum(is.na(x)))
+sapply(base[, c("SYSBP", "AGE", 
+                "DIABETES", "BPMEDS")], function(x) sum(is.na(x)))
+
+## split into male and female
+
+base_male <- base_final[base_final$SEX == 1, ]
+base_female <- base_final[base_final$SEX == 2, ]
+
+
+## update survival objects for both
+
+surv_male <- Surv(time = base_male$stroke_time, 
+                  event = base_male$stroke_event)
+surv_female <- Surv(time = base_female$stroke_time, 
+                    event = base_female$stroke_event)
+
+
+## Full model then stepwise model
+# Male
+library(MASS)
+
+# Male full model
+full_male <- coxph(surv_male ~ SYSBP + AGE + DIABETES + BPMEDS, 
+                   data = base_male)
+
+# Stepwise on male model
+step_male <- stepAIC(full_male, 
+                     scope = list(lower = ~ SYSBP + AGE + DIABETES,
+                                  upper = ~ SYSBP + AGE + DIABETES + BPMEDS),
+                     direction = "both",
+                     trace = TRUE)
+
+summary(step_male)
+
+
+# female
+# Female full model
+full_female <- coxph(surv_female ~ SYSBP + AGE + DIABETES + BPMEDS, 
+                     data = base_female)
+
+# Stepwise on female model
+step_female <- stepAIC(full_female,
+                       scope = list(lower = ~ SYSBP + AGE + DIABETES,
+                                    upper = ~ SYSBP + AGE + DIABETES + BPMEDS),
+                       direction = "both",
+                       trace = TRUE)
+
+summary(step_female)
+
+
+## remove bpmeds as not significant in males, barely in females
+
+final_male <- coxph(surv_male ~ SYSBP + AGE + DIABETES, data = base_male)
+final_female <- coxph(surv_female ~ SYSBP + AGE + DIABETES, data = base_female)
+
+### check assumptions
+
+# Schoenfeld residuals
+ph_male <- cox.zph(final_male)
+ph_female <- cox.zph(final_female)
+
+print(ph_male)
+print(ph_female)
+
+
+# Male
+par(mfrow = c(2, 2))
+plot(ph_male)
+
+# Female
+par(mfrow = c(2, 2))
+plot(ph_female)
+
+
+
+
+
+
+
+
+
+
+
 
 
