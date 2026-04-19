@@ -203,9 +203,12 @@ summary(step_female)
 
 
 ## remove bpmeds as not significant in males, barely in females
+# add back in cursmoke becasuee we need one extra profile
 
-final_male <- coxph(surv_male ~ SYSBP + AGE + DIABETES, data = base_male)
-final_female <- coxph(surv_female ~ SYSBP + AGE + DIABETES, data = base_female)
+final_male <- coxph(surv_male ~ SYSBP + AGE + 
+                      DIABETES + CURSMOKE, data = base_male)
+final_female <- coxph(surv_female ~ SYSBP + AGE + 
+                        DIABETES + CURSMOKE, data = base_female)
 
 ### check assumptions
 
@@ -224,6 +227,131 @@ plot(ph_male)
 # Female
 par(mfrow = c(2, 2))
 plot(ph_female)
+
+
+
+#### Survival Models ####
+
+## profiles with age
+
+#40
+profiles_male_40 <- data.frame(
+  SYSBP    = c(mean(base_male$SYSBP, na.rm = TRUE), 160, 
+               mean(base_male$SYSBP, na.rm = TRUE), 160, 
+               mean(base_male$SYSBP, na.rm = TRUE)),
+  AGE      = 40,
+  DIABETES = c(0, 0, 1, 1, 0),
+  CURSMOKE = c(0, 0, 0, 0, 1)
+)
+
+profiles_female_40 <- data.frame(
+  SYSBP    = c(mean(base_female$SYSBP, na.rm = TRUE), 160, 
+               mean(base_female$SYSBP, na.rm = TRUE), 160, 
+               mean(base_female$SYSBP, na.rm = TRUE)),
+  AGE      = 40,
+  DIABETES = c(0, 0, 1, 1, 0),
+  CURSMOKE = c(0, 0, 0, 0, 1)
+)
+
+# Age 40
+male_40   <- 1 - summary(survfit(final_male, newdata = profiles_male_40), 
+                         times = 3652.5)$surv
+female_40 <- 1 - summary(survfit(final_female, newdata = profiles_female_40), 
+                         times = 3652.5)$surv
+
+table_40 <- data.frame(
+  Profile  = c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"),
+  Male     = round(male_40, 4),
+  Female   = round(female_40, 4)
+)
+
+
+
+# 50
+profiles_male_50 <- data.frame(
+  SYSBP    = c(mean(base_male$SYSBP, na.rm = TRUE), 160, 
+               mean(base_male$SYSBP, na.rm = TRUE), 160, 
+               mean(base_male$SYSBP, na.rm = TRUE)),
+  AGE      = 50,
+  DIABETES = c(0, 0, 1, 1, 0),
+  CURSMOKE = c(0, 0, 0, 0, 1)
+)
+
+profiles_female_50 <- data.frame(
+  SYSBP    = c(mean(base_female$SYSBP, na.rm = TRUE), 160, 
+               mean(base_female$SYSBP, na.rm = TRUE), 160, 
+               mean(base_female$SYSBP, na.rm = TRUE)),
+  AGE      = 50,
+  DIABETES = c(0, 0, 1, 1, 0),
+  CURSMOKE = c(0, 0, 0, 0, 1)
+)
+
+# Age 50
+male_50   <- 1 - summary(survfit(final_male, newdata = profiles_male_50), 
+                         times = 3652.5)$surv
+female_50 <- 1 - summary(survfit(final_female, newdata = profiles_female_50), 
+                         times = 3652.5)$surv
+
+table_50 <- data.frame(
+  Profile  = c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"),
+  Male     = round(male_50, 4),
+  Female   = round(female_50, 4)
+)
+
+
+# 60
+profiles_male_60 <- data.frame(
+  SYSBP    = c(mean(base_male$SYSBP, na.rm = TRUE), 160, 
+               mean(base_male$SYSBP, na.rm = TRUE), 160, 
+               mean(base_male$SYSBP, na.rm = TRUE)),
+  AGE      = 60,
+  DIABETES = c(0, 0, 1, 1, 0),
+  CURSMOKE = c(0, 0, 0, 0, 1)
+)
+
+profiles_female_60 <- data.frame(
+  SYSBP    = c(mean(base_female$SYSBP, na.rm = TRUE), 160, 
+               mean(base_female$SYSBP, na.rm = TRUE), 160, 
+               mean(base_female$SYSBP, na.rm = TRUE)),
+  AGE      = 60,
+  DIABETES = c(0, 0, 1, 1, 0),
+  CURSMOKE = c(0, 0, 0, 0, 1)
+)
+
+# Age 60
+male_60   <- 1 - summary(survfit(final_male, newdata = profiles_male_60), 
+                         times = 3652.5)$surv
+female_60 <- 1 - summary(survfit(final_female, newdata = profiles_female_60), 
+                         times = 3652.5)$surv
+
+table_60 <- data.frame(
+  Profile  = c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"),
+  Male     = round(male_60, 4),
+  Female   = round(female_60, 4)
+)
+
+
+
+# FInal table for all of them
+
+# Add age column to each table
+table_40$Age <- 40
+table_50$Age <- 50
+table_60$Age <- 60
+
+# Combine all three
+final_table <- rbind(table_40, table_50, table_60)
+
+# Reorder columns so Age is first
+final_table <- final_table[, c("Age", "Profile", "Male", "Female")]
+
+print(final_table)
+
+
+
+
+
+
 
 
 
