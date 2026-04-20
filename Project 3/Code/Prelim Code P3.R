@@ -254,15 +254,16 @@ profiles_female_40 <- data.frame(
 )
 
 # Age 40
-male_40   <- 1 - summary(survfit(final_male, newdata = profiles_male_40), 
-                         times = 3652.5)$surv
-female_40 <- 1 - summary(survfit(final_female, newdata = profiles_female_40), 
-                         times = 3652.5)$surv
+male_40   <- 1 - as.vector(summary(survfit(final_male, newdata = profiles_male_40), 
+                         times = 3652.5)$surv)
+female_40 <- 1 - as.vector(summary(survfit(final_female, newdata = profiles_female_40), 
+                         times = 3652.5)$surv)
 
 table_40 <- data.frame(
+  Age      = 40,
   Profile  = c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"),
-  Male     = round(male_40, 4),
-  Female   = round(female_40, 4)
+  Male     = round(1 - male_40, 4),
+  Female   = round(1 - female_40, 4)
 )
 
 
@@ -287,15 +288,16 @@ profiles_female_50 <- data.frame(
 )
 
 # Age 50
-male_50   <- 1 - summary(survfit(final_male, newdata = profiles_male_50), 
-                         times = 3652.5)$surv
-female_50 <- 1 - summary(survfit(final_female, newdata = profiles_female_50), 
-                         times = 3652.5)$surv
+male_50   <- 1 - as.vector(summary(survfit(final_male, newdata = profiles_male_50), 
+                         times = 3652.5)$surv)
+female_50 <- 1 - as.vector(summary(survfit(final_female, newdata = profiles_female_50), 
+                         times = 3652.5)$surv)
 
 table_50 <- data.frame(
+  Age      = 50,
   Profile  = c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"),
-  Male     = round(male_50, 4),
-  Female   = round(female_50, 4)
+  Male     = round(1 - male_50, 4),
+  Female   = round(1 - female_50, 4)
 )
 
 
@@ -319,39 +321,68 @@ profiles_female_60 <- data.frame(
 )
 
 # Age 60
-male_60   <- 1 - summary(survfit(final_male, newdata = profiles_male_60), 
-                         times = 3652.5)$surv
-female_60 <- 1 - summary(survfit(final_female, newdata = profiles_female_60), 
-                         times = 3652.5)$surv
+male_60   <- 1 - as.vector(summary(survfit(final_male, newdata = profiles_male_60), 
+                         times = 3652.5)$surv)
+female_60 <- 1 - as.vector(summary(survfit(final_female, newdata = profiles_female_60), 
+                         times = 3652.5)$surv)
 
 table_60 <- data.frame(
+  Age      = 60,
   Profile  = c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"),
-  Male     = round(male_60, 4),
-  Female   = round(female_60, 4)
+  Male     = round(1 - male_60, 4),
+  Female   = round(1 - female_60, 4)
 )
 
 
-
+########## DO NOT USE THIS TABLE ###############
 # FInal table for all of them
 
-# Add age column to each table
-table_40$Age <- 40
-table_50$Age <- 50
-table_60$Age <- 60
-
-# Combine all three
 final_table <- rbind(table_40, table_50, table_60)
+rownames(final_table) <- NULL
 
-# Reorder columns so Age is first
-final_table <- final_table[, c("Age", "Profile", "Male", "Female")]
+print(final_table)
+#################################################
+
+
+# Try a different approach
+# Age 40
+m40 <- summary(survfit(final_male,   newdata = profiles_male_40),
+               times = 3652.5)$surv
+f40 <- summary(survfit(final_female, newdata = profiles_female_40),
+               times = 3652.5)$surv
+
+# Age 50
+m50 <- summary(survfit(final_male,   newdata = profiles_male_50),
+               times = 3652.5)$surv
+f50 <- summary(survfit(final_female, newdata = profiles_female_50),
+               times = 3652.5)$surv
+
+# Age 60
+m60 <- summary(survfit(final_male,   newdata = profiles_male_60),
+               times = 3652.5)$surv
+f60 <- summary(survfit(final_female, newdata = profiles_female_60),
+               times = 3652.5)$surv
+
+# Build table manually indexing each profile [1,i]
+final_table <- data.frame(
+  Age     = rep(c(40, 50, 60), each = 5),
+  Profile = rep(c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"), 3),
+  Male    = round(1 - c(m40[1,1], m40[1,2], m40[1,3], m40[1,4], m40[1,5],
+                        m50[1,1], m50[1,2], m50[1,3], m50[1,4], m50[1,5],
+                        m60[1,1], m60[1,2], m60[1,3], m60[1,4], m60[1,5]), 4),
+  Female  = round(1 - c(f40[1,1], f40[1,2], f40[1,3], f40[1,4], f40[1,5],
+                        f50[1,1], f50[1,2], f50[1,3], f50[1,4], f50[1,5],
+                        f60[1,1], f60[1,2], f60[1,3], f60[1,4], f60[1,5]), 4)
+)
 
 print(final_table)
 
-
-
-
-
-
+# Option 1 - knitr alone (likely already installed)
+library(knitr)
+kable(final_table,
+      col.names = c("Age", "Risk Profile", "Male", "Female"),
+      caption = "10-Year Stroke Probability by Risk Profile, Age, and Sex",
+      align = c("c", "l", "c", "c"))
 
 
 
