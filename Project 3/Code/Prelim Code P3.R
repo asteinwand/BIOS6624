@@ -9,6 +9,7 @@ library(MASS)
 fhsdata <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 3/Data Raw/frmgham2.csv")
 
 
+
 # Notes to self:
 # remove stroke = 1 at baseline
 # remove stroke >3652.5 days
@@ -47,7 +48,50 @@ min(base$BMI, na.rm = TRUE) # 15.54
 max(base$BMI, na.rm = TRUE) # 56.8 all plausible values for BMI
 
 
+##########################################################
+## Table 1
+############################################################
+library(gtsummary)
 
+# Base R factor conversions - no dplyr needed
+table1_data <- base
+
+table1_data$SEX       <- factor(base$SEX,       levels = c(1, 2), labels = c("Male", "Female"))
+table1_data$DIABETES  <- factor(base$DIABETES,  levels = c(0, 1), labels = c("No", "Yes"))
+table1_data$CURSMOKE  <- factor(base$CURSMOKE,  levels = c(0, 1), labels = c("No", "Yes"))
+table1_data$stroke_event <- factor(base$stroke_event, levels = c(0, 1), labels = c("No", "Yes"))
+
+# Build Table 1 - only variables in final model + age + outcome
+table1 <- tbl_summary(
+  data = table1_data[, c("SEX", "AGE", "SYSBP", "DIABETES", "CURSMOKE", "stroke_event")],
+  by = SEX,
+  label = list(
+    AGE          ~ "Age (years)",
+    SYSBP        ~ "Systolic Blood Pressure (mmHg)",
+    DIABETES     ~ "Diabetes",
+    CURSMOKE     ~ "Current Smoker",
+    stroke_event ~ "Stroke Event within 10 Years"
+  ),
+  statistic = list(
+    all_continuous()  ~ "{mean} ({sd})",
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  digits = list(
+    all_continuous()  ~ 1,
+    all_categorical() ~ c(0, 1)
+  ),
+  missing = "ifany",
+  missing_text = "Missing"
+) %>%
+  add_overall() %>%
+  bold_labels() %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  modify_caption("**Table 1. Baseline Characteristics by Sex**")
+
+
+print(table1)
+
+table1
 
 
 ### fit KM curves to determine what we put in the cox model
