@@ -9,15 +9,6 @@ library(knitr)
 # Upload Data set
 fhsdata <- read.csv("C:/Users/stein/OneDrive/Documents/School/2026 Spring/Advanced Methods/BIOS6624/Project 3/Data Raw/frmgham2.csv")
 
-
-
-# Notes to self:
-# remove stroke = 1 at baseline
-# remove stroke >3652.5 days
-# check missing: BP(systolic), age, diabetes
-# heart disease, smoking status, bp medication, HDL/LDL, BMI
-# 
-
 ## Initial data cleaning
 
 # remove anyone with stroke at baseline (STROKE = 1 at period 1)
@@ -47,7 +38,6 @@ sum(base$AGE > 99 | base$AGE <= 18) # 0
 
 min(base$BMI, na.rm = TRUE) # 15.54
 max(base$BMI, na.rm = TRUE) # 56.8 all plausible values for BMI
-
 
 ##########################################################
 ## Table 1
@@ -88,12 +78,6 @@ table1 <- tbl_summary(
   modify_header(label ~ "**Characteristic**") %>%
   modify_caption("**Table 1. Baseline Characteristics by Sex**")
 
-
-print(table1)
-
-table1
-
-
 ### fit KM curves to determine what we put in the cox model
 
 surv_obj <- Surv(time = base$stroke_time, event = base$stroke_event)
@@ -123,8 +107,7 @@ ggsurvplot(km_sex,
            risk.table = T)
 
 
-
-##### FILTERED DATA WRONG ####### fix it
+## Checking if data filtered correctly
 
 hist(fhsdata$TIMESTRK[fhsdata$PERIOD == 1 & fhsdata$STROKE == 1],
      main = "TIMESTRK for Stroke=1 at Period 1",
@@ -133,11 +116,7 @@ hist(fhsdata$TIMESTRK[fhsdata$PERIOD == 1 & fhsdata$STROKE == 1],
 
 summary(fhsdata$TIMESTRK[fhsdata$PERIOD == 1 & fhsdata$STROKE == 1])
 
-
-### check the variables that we are debating including
-
-
-# Dichotomized versions are just for KM plotting
+# Dichotomized versions just for KM plotting
 base$bmi_cat    <- ifelse(base$BMI >= 30, "Obese", "Non-obese")
 base$chol_cat   <- ifelse(base$TOTCHOL >= 240, "High Chol", "Normal Chol")
 base$bpmeds_cat <- ifelse(base$BPMEDS == 1, "On BP Meds", "Not on BP Meds")
@@ -187,7 +166,6 @@ ggsurvplot(km_heartrte, data = base,
 
 
 
-
 ### Start survival models ####
 
 ### complete case analysis to add back in dropped variables
@@ -212,11 +190,7 @@ surv_male <- Surv(time = base_male$stroke_time,
 surv_female <- Surv(time = base_female$stroke_time, 
                     event = base_female$stroke_event)
 
-
 ## Full model then stepwise model
-# Male
-library(MASS)
-
 # Male full model
 full_male <- coxph(surv_male ~ SYSBP + AGE + DIABETES + BPMEDS, 
                    data = base_male)
@@ -248,7 +222,6 @@ summary(step_female)
 
 ## remove bpmeds as not significant in males, barely in females
 # add back in cursmoke becasuee we need one extra profile
-
 final_male <- coxph(surv_male ~ SYSBP + AGE + 
                       DIABETES + CURSMOKE, data = base_male)
 final_female <- coxph(surv_female ~ SYSBP + AGE + 
@@ -271,8 +244,6 @@ plot(ph_male)
 # Female
 par(mfrow = c(2, 2))
 plot(ph_female)
-
-
 
 #### Survival Models ####
 
@@ -299,9 +270,9 @@ profiles_female_40 <- data.frame(
 
 # Age 40
 male_40   <- as.vector(summary(survfit(final_male, newdata = profiles_male_40), 
-                         times = 3652.5)$surv)
+                               times = 3652.5)$surv)
 female_40 <- as.vector(summary(survfit(final_female, newdata = profiles_female_40), 
-                         times = 3652.5)$surv)
+                               times = 3652.5)$surv)
 
 table_40 <- data.frame(
   Age      = 40,
@@ -333,9 +304,9 @@ profiles_female_50 <- data.frame(
 
 # Age 50
 male_50   <- as.vector(summary(survfit(final_male, newdata = profiles_male_50), 
-                         times = 3652.5)$surv)
+                               times = 3652.5)$surv)
 female_50 <- as.vector(summary(survfit(final_female, newdata = profiles_female_50), 
-                         times = 3652.5)$surv)
+                               times = 3652.5)$surv)
 
 table_50 <- data.frame(
   Age      = 50,
@@ -366,9 +337,9 @@ profiles_female_60 <- data.frame(
 
 # Age 60
 male_60   <- as.vector(summary(survfit(final_male, newdata = profiles_male_60), 
-                         times = 3652.5)$surv)
+                               times = 3652.5)$surv)
 female_60 <- as.vector(summary(survfit(final_female, newdata = profiles_female_60), 
-                         times = 3652.5)$surv)
+                               times = 3652.5)$surv)
 
 table_60 <- data.frame(
   Age      = 60,
@@ -378,17 +349,7 @@ table_60 <- data.frame(
 )
 
 
-########## DO NOT USE THIS TABLE ###############
-# FInal table for all of them
-
-final_table <- rbind(table_40, table_50, table_60)
-rownames(final_table) <- NULL
-
-print(final_table)
-#################################################
-
-
-# Try a different approach
+## Final Summary Table
 # Age 40
 m40 <- summary(survfit(final_male,   newdata = profiles_male_40),
                times = 3652.5)$surv
@@ -406,21 +367,6 @@ m60 <- summary(survfit(final_male,   newdata = profiles_male_60),
                times = 3652.5)$surv
 f60 <- summary(survfit(final_female, newdata = profiles_female_60),
                times = 3652.5)$surv
-
-# Build table manually indexing each profile [1,i]
-final_table <- data.frame(
-  Age     = rep(c(40, 50, 60), each = 5),
-  Profile = rep(c("Average", "High BP", "Diabetes", "High BP + DM", "Smoker"), 3),
-  Male    = round(1 - c(m40[1,1], m40[1,2], m40[1,3], m40[1,4], m40[1,5],
-                        m50[1,1], m50[1,2], m50[1,3], m50[1,4], m50[1,5],
-                        m60[1,1], m60[1,2], m60[1,3], m60[1,4], m60[1,5]), 4),
-  Female  = round(1 - c(f40[1,1], f40[1,2], f40[1,3], f40[1,4], f40[1,5],
-                        f50[1,1], f50[1,2], f50[1,3], f50[1,4], f50[1,5],
-                        f60[1,1], f60[1,2], f60[1,3], f60[1,4], f60[1,5]), 4)
-)
-
-print(final_table)
-
 
 # Add a Sex label column and blank separator rows for grouping
 surv_table_display <- data.frame(
@@ -451,23 +397,8 @@ surv_table_display <- data.frame(
 )
 
 
-cat("\\newpage")
-
 kable(surv_table_display,
       col.names = c("Risk Profile", "Age 40", "Age 50", "Age 60"),
       caption   = "10-Year Stroke-Free Survival Probability by Risk Profile, Age, and Sex",
       booktabs  = TRUE,
       align     = c("l", "c", "c", "c"))
-
-
-#########################################################################
-# Secondary Analysis
-########################################################################
-
-
-
-
-
-
-
-
