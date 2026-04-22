@@ -2,6 +2,7 @@ library(survminer)
 library(survival)
 library(gtsummary)
 library(MASS)
+library(gt)
 
 
 
@@ -53,7 +54,6 @@ max(base$BMI, na.rm = TRUE) # 56.8 all plausible values for BMI
 ############################################################
 library(gtsummary)
 
-# Base R factor conversions - no dplyr needed
 table1_data <- base
 
 table1_data$SEX       <- factor(base$SEX,       levels = c(1, 2), labels = c("Male", "Female"))
@@ -298,9 +298,9 @@ profiles_female_40 <- data.frame(
 )
 
 # Age 40
-male_40   <- 1 - as.vector(summary(survfit(final_male, newdata = profiles_male_40), 
+male_40   <- as.vector(summary(survfit(final_male, newdata = profiles_male_40), 
                          times = 3652.5)$surv)
-female_40 <- 1 - as.vector(summary(survfit(final_female, newdata = profiles_female_40), 
+female_40 <- as.vector(summary(survfit(final_female, newdata = profiles_female_40), 
                          times = 3652.5)$surv)
 
 table_40 <- data.frame(
@@ -332,9 +332,9 @@ profiles_female_50 <- data.frame(
 )
 
 # Age 50
-male_50   <- 1 - as.vector(summary(survfit(final_male, newdata = profiles_male_50), 
+male_50   <- as.vector(summary(survfit(final_male, newdata = profiles_male_50), 
                          times = 3652.5)$surv)
-female_50 <- 1 - as.vector(summary(survfit(final_female, newdata = profiles_female_50), 
+female_50 <- as.vector(summary(survfit(final_female, newdata = profiles_female_50), 
                          times = 3652.5)$surv)
 
 table_50 <- data.frame(
@@ -365,9 +365,9 @@ profiles_female_60 <- data.frame(
 )
 
 # Age 60
-male_60   <- 1 - as.vector(summary(survfit(final_male, newdata = profiles_male_60), 
+male_60   <- as.vector(summary(survfit(final_male, newdata = profiles_male_60), 
                          times = 3652.5)$surv)
-female_60 <- 1 - as.vector(summary(survfit(final_female, newdata = profiles_female_60), 
+female_60 <- as.vector(summary(survfit(final_female, newdata = profiles_female_60), 
                          times = 3652.5)$surv)
 
 table_60 <- data.frame(
@@ -428,6 +428,62 @@ kable(final_table,
       caption = "10-Year Stroke Probability by Risk Profile, Age, and Sex",
       align = c("c", "l", "c", "c"))
 
+
+library(gt)
+
+# Build survival probability table (remove 1- for survival, not event prob)
+# Rows: Male then Female | Columns: Age 40, 50, 60 | Profiles: 5 rows each
+
+surv_table <- data.frame(
+  Sex = c(rep("Male", 5), rep("Female", 5)),
+  Profile = rep(c("Average", "High BP (160)", "Diabetes", "High BP + DM", "Smoker"), 2),
+  Age_40 = round(c(
+    m40[1,1], m40[1,2], m40[1,3], m40[1,4], m40[1,5],
+    f40[1,1], f40[1,2], f40[1,3], f40[1,4], f40[1,5]
+  ), 4),
+  Age_50 = round(c(
+    m50[1,1], m50[1,2], m50[1,3], m50[1,4], m50[1,5],
+    f50[1,1], f50[1,2], f50[1,3], f50[1,4], f50[1,5]
+  ), 4),
+  Age_60 = round(c(
+    m60[1,1], m60[1,2], m60[1,3], m60[1,4], m60[1,5],
+    f60[1,1], f60[1,2], f60[1,3], f60[1,4], f60[1,5]
+  ), 4)
+)
+
+# Format as gt table with Sex as row grouping
+surv_gt <- surv_table %>%
+  gt(groupname_col = "Sex") %>%
+  cols_label(
+    Profile = "Risk Profile",
+    Age_40  = "Age 40",
+    Age_50  = "Age 50",
+    Age_60  = "Age 60"
+  ) %>%
+  tab_spanner(
+    label = "10-Year Stroke-Free Survival Probability",
+    columns = c(Age_40, Age_50, Age_60)
+  ) %>%
+  tab_header(
+    title    = "10-Year Stroke-Free Survival Probability by Risk Profile",
+    subtitle = "Stratified by Sex and Age"
+  ) %>%
+  fmt_number(
+    columns  = c(Age_40, Age_50, Age_60),
+    decimals = 4
+  ) %>%
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_row_groups()
+  ) %>%
+  tab_style(
+    style     = cell_fill(color = "#f2f2f2"),
+    locations = cells_row_groups()
+  ) %>%
+  cols_align(align = "center", columns = c(Age_40, Age_50, Age_60)) %>%
+  cols_align(align = "left",   columns = Profile)
+
+surv_gt
 
 
 
