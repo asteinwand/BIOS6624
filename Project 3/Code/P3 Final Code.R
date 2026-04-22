@@ -402,3 +402,52 @@ kable(surv_table_display,
       caption   = "10-Year Stroke-Free Survival Probability by Risk Profile, Age, and Sex",
       booktabs  = TRUE,
       align     = c("l", "c", "c", "c"))
+
+
+
+#########################################################################
+# Secondary Analysis
+########################################################################
+
+# Prepare periods data from raw fhsdata
+# Factor the period and categorical variables - base R only
+periods_data <- fhsdata
+
+periods_data$PERIOD   <- factor(fhsdata$PERIOD,   levels = c(1, 2, 3), 
+                                labels = c("Period 1", "Period 2", "Period 3"))
+periods_data$DIABETES <- factor(fhsdata$DIABETES,  levels = c(0, 1), labels = c("No", "Yes"))
+periods_data$CURSMOKE <- factor(fhsdata$CURSMOKE,  levels = c(0, 1), labels = c("No", "Yes"))
+
+# Build the table stratified by period
+periods_table <- tbl_summary(
+  data = periods_data[, c("PERIOD", "AGE", "SYSBP", "DIABETES", "CURSMOKE")],
+  by = PERIOD,
+  label = list(
+    AGE      ~ "Age (years)",
+    SYSBP    ~ "Systolic Blood Pressure (mmHg)",
+    DIABETES ~ "Diabetes",
+    CURSMOKE ~ "Current Smoker"
+  ),
+  statistic = list(
+    all_continuous()  ~ "{mean} ({sd})",
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  digits = list(
+    all_continuous()  ~ 1,
+    all_categorical() ~ c(0, 1)
+  ),
+  missing = "ifany",
+  missing_text = "Missing"
+) %>%
+  add_overall() %>%
+  add_p(
+    test = list(
+      all_continuous()  ~ "oneway.test",
+      all_categorical() ~ "chisq.test"
+    )
+  ) %>%
+  bold_labels() %>%
+  bold_p(t = 0.05) %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  modify_caption("**Table 3. Risk Factor Comparison Across Data Collection Periods**")
+
