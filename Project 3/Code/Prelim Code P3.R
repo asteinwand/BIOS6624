@@ -460,6 +460,49 @@ kable(surv_table_display,
       align     = c("l", "c", "c", "c"))
 
 
+
+
+# Male model results
+library(gtsummary)
+
+# Male model results
+tbl_male <- tbl_regression(
+  final_male,
+  exponentiate = TRUE,
+  label = list(
+    SYSBP    ~ "Systolic Blood Pressure (mmHg)",
+    AGE      ~ "Age (years)",
+    DIABETES ~ "Diabetes",
+    CURSMOKE ~ "Current Smoker"
+  )
+) %>%
+  bold_p(t = 0.05) %>%
+  bold_labels() %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  modify_caption("**Table. Cox Model Results - Male**")
+
+# Female model results
+tbl_female <- tbl_regression(
+  final_female,
+  exponentiate = TRUE,
+  label = list(
+    SYSBP    ~ "Systolic Blood Pressure (mmHg)",
+    AGE      ~ "Age (years)",
+    DIABETES ~ "Diabetes",
+    CURSMOKE ~ "Current Smoker"
+  )
+) %>%
+  bold_p(t = 0.05) %>%
+  bold_labels() %>%
+  modify_header(label ~ "**Characteristic**") %>%
+  modify_caption("**Table. Cox Model Results - Female**")
+
+# Merge into one side-by-side table
+tbl_merge(
+  list(tbl_male, tbl_female),
+  tab_spanner = c("**Male**", "**Female**")
+)
+
 #########################################################################
 # Secondary Analysis
 ########################################################################
