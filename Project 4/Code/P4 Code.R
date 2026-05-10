@@ -264,18 +264,152 @@ saveRDS(simres, "simres.rds")
 
 
 
+########### Results ####################
+
+## True positives per variable (sensitivity)
+
+tpr <- simres |>
+  filter(true_non_zero == 1) |>
+  group_by(case, method, variables) |>
+  summarise(TPR = mean(selected) * 100, .groups = "drop")
+
+tpr_wide <- tpr |>
+  pivot_wider(names_from = variables, values_from = TPR)
+
+knitr::kable(tpr_wide, digits = 1,
+             caption = "True Positive Rate (%) by Method, Case, and Variable")
+
+## False positives 
+fpr <- simres |>
+  filter(true_non_zero == 0) |>
+  group_by(case, method, variables) |>
+  summarise(FPR = mean(selected) * 100, .groups = "drop")
+
+fpr_avg <- fpr |>
+  group_by(case, method) |>
+  summarise(Mean_FPR = mean(FPR), .groups = "drop") |>
+  pivot_wider(names_from = method, values_from = Mean_FPR)
+
+knitr::kable(fpr_avg, digits = 2,
+             caption = "Mean False Positive Rate (%) Across Null Predictors (V06–V20)")
+
+
+
+## Confusion matrix summary (aggregated)
+
+## Counts: TP, FP, TN, FN averaged across replicates.
+
+conf <- simres |>
+  mutate(
+    TP = as.integer(selected == 1 & true_non_zero == 1),
+    FP = as.integer(selected == 1 & true_non_zero == 0),
+    TN = as.integer(selected == 0 & true_non_zero == 0),
+    FN = as.integer(selected == 0 & true_non_zero == 1)
+  ) |>
+  group_by(case, method, iter) |>
+  summarise(TP = sum(TP), FP = sum(FP),
+            TN = sum(TN), FN = sum(FN), .groups = "drop") |>
+  group_by(case, method) |>
+  summarise(across(c(TP, FP, TN, FN), mean), .groups = "drop")
+
+knitr::kable(conf, digits = 2,
+             caption = "Mean Confusion Matrix Counts per Replicate")
+
+
+
+## Coefficient bias
+bias_tbl <- simres |>
+  filter(true_non_zero == 1) |>
+  group_by(case, method, variables, true_values) |>
+  summarise(Mean_Bias = mean(bias), .groups = "drop") |>
+  pivot_wider(names_from = variables, values_from = Mean_Bias)
+
+knitr::kable(bias_tbl, digits = 4,
+             caption = "Mean Bias of Coefficient Estimates for True Predictors (V01–V05)")
+
+
+## 95% CI coverage
+
+coverage <- simres |>
+  filter(true_non_zero == 1) |>
+  group_by(case, method, variables) |>
+  summarise(Coverage = mean(covered, na.rm = TRUE) * 100, .groups = "drop") |>
+  pivot_wider(names_from = variables, values_from = Coverage)
+
+knitr::kable(coverage, digits = 1,
+             caption = "95% CI Coverage (%) for True Predictors (V01–V05)")
+
+
+## Type 1 Error
+typeI <- simres |>
+  filter(true_non_zero == 0, selected == 1) |>
+  group_by(case, method) |>
+  summarise(Type_I_error = mean(signif) * 100,
+            n_selected   = sum(selected),
+            .groups = "drop")
+
+knitr::kable(typeI, digits = 2,
+             caption = "Type I Error Rate (%) Among Selected Null Predictors")
+
+## Type 2 Error
+typeII <- simres |>
+  filter(true_non_zero == 1) |>
+  mutate(missed = as.integer(selected == 0 | (selected == 1 & signif == 0))) |>
+  group_by(case, method, variables) |>
+  summarise(Type_II_error = mean(missed) * 100, .groups = "drop") |>
+  pivot_wider(names_from = variables, values_from = Type_II_error)
+
+knitr::kable(typeII, digits = 1,
+             caption = "Type II Error Rate (%) for True Predictors (V01–V05)")
 
 
 
 
 
 
+## TPR by method and case
+
+tpr |>
+  group_by(case, method) |>
+  summarise(Mean_TPR = mean(TPR), .groups = "drop") |>
+  ggplot(aes(x = method, y = Mean_TPR, fill = case)) +
+  geom_col(position = "dodge") +
+  geom_hline(yintercept = 100, linetype = "dashed", color = "gray40") +
+  labs(title = "Mean True Positive Rate by Method and Scenario",
+       x = NULL, y = "TPR (%)", fill = "Scenario") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))
+
+
+## Mean FPR by method and case
+fpr |>
+  group_by(case, method) |>
+  summarise(Mean_FPR = mean(FPR), .groups = "drop") |>
+  ggplot(aes(x = method, y = Mean_FPR, fill = case)) +
+  geom_col(position = "dodge") +
+  labs(title = "Mean False Positive Rate by Method and Scenario",
+       x = NULL, y = "Mean FPR (%)", fill = "Scenario") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))
 
 
 
 
 
 
+## Coverage by method and scenario (true predictors only)
+simres |>
+  filter(true_non_zero == 1) |>
+  group_by(case, method) |>
+  summarise(Coverage = mean(covered, na.rm = TRUE) * 100, .groups = "drop") |>
+  ggplot(aes(x = method, y = Coverage, color = case, group = case)) +
+  geom_point(size = 3) +
+  geom_line() +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red") +
+  labs(title = "95% CI Coverage for True Predictors by Method and Scenario",
+       x = NULL, y = "Coverage (%)", color = "Scenario") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))
 
 
 
