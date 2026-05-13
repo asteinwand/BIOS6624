@@ -3,6 +3,9 @@ library(glmnet)
 library(future)
 library(future.apply)
 library(tidyverse)
+library(knitr)
+library(gt)
+
 
 
 
@@ -312,9 +315,11 @@ conf <- simres |>
   group_by(case, method) |>
   summarise(across(c(TP, FP, TN, FN), mean), .groups = "drop")
 
-knitr::kable(conf, digits = 2,
-             caption = "Mean Confusion Matrix Counts per Replicate")
 
+gt(conf) |>
+  tab_header(
+    title = "Mean Confusion Matrix Counts per Replicate"
+  )
 
 
 ## Coefficient bias
@@ -326,6 +331,8 @@ bias_tbl <- simres |>
 
 knitr::kable(bias_tbl, digits = 4,
              caption = "Mean Bias of Coefficient Estimates for True Predictors (V01–V05)")
+
+#horribly long table don't put in report or just do appendix
 
 
 ## 95% CI coverage
